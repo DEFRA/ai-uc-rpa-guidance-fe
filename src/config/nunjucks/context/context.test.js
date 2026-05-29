@@ -71,7 +71,7 @@ describe('context and cache', () => {
               href: '/about'
             }
           ],
-          serviceName: 'cdp-node-frontend-template',
+          serviceName: 'ai-uc-rpa-guidance-fe',
           serviceUrl: '/'
         })
       })
@@ -160,7 +160,7 @@ describe('context and cache', () => {
               href: '/about'
             }
           ],
-          serviceName: 'cdp-node-frontend-template',
+          serviceName: 'ai-uc-rpa-guidance-fe',
           serviceUrl: '/'
         })
       })
