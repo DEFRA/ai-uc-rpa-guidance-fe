@@ -1,4 +1,5 @@
 import { statusCodes } from '../constants/status-codes.js'
+import { buildErrorLog } from '../infra/logging/utils/build-error-log.js'
 
 function statusCodeMessage (statusCode) {
   switch (statusCode) {
