@@ -54,7 +54,7 @@ describe('views plugin', () => {
         expect.objectContaining({
           assetPath: '/public/assets',
           getAssetPath: expect.any(Function),
-          serviceName: 'DDTS Digital Delivery MCP Registry'
+          serviceName: 'RPA Guidance AI Usecase PoC'
         })
       )
     })
@@ -72,7 +72,7 @@ describe('views plugin', () => {
 
       const ctx = viewPlugin.options.context()
 
-      expect(ctx.serviceName).toBe('DDTS Digital Delivery MCP Registry')
+      expect(ctx.serviceName).toBe('RPA Guidance AI Usecase PoC')
     })
 
     test('Should expose cspNonce when Blankie is registered', async () => {

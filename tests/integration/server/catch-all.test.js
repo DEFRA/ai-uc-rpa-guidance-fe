@@ -21,7 +21,7 @@ describe('#catchAll integration', () => {
     })
 
     expect(result).toEqual(
-      expect.stringContaining('Page not found | DDTS Digital Delivery MCP Registry')
+      expect.stringContaining('Page not found | RPA Guidance AI Usecase PoC')
     )
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
   })

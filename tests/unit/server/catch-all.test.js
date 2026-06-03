@@ -28,7 +28,7 @@ describe('#catchAll', () => {
   test('Should provide expected "Not Found" page', () => {
     catchAll(mockRequest(statusCodes.HTTP_STATUS_NOT_FOUND), mockToolkit)
 
-    expect(mockErrorLogger).not.toHaveBeenCalledWith(mockStack)
+    expect(mockErrorLogger).not.toHaveBeenCalled()
     expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
       pageTitle: 'Page not found',
       heading: statusCodes.HTTP_STATUS_NOT_FOUND,
@@ -40,7 +40,7 @@ describe('#catchAll', () => {
   test('Should provide expected "Forbidden" page', () => {
     catchAll(mockRequest(statusCodes.HTTP_STATUS_FORBIDDEN), mockToolkit)
 
-    expect(mockErrorLogger).not.toHaveBeenCalledWith(mockStack)
+    expect(mockErrorLogger).not.toHaveBeenCalled()
     expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
       pageTitle: 'Forbidden',
       heading: statusCodes.HTTP_STATUS_FORBIDDEN,
@@ -52,7 +52,7 @@ describe('#catchAll', () => {
   test('Should provide expected "Unauthorized" page', () => {
     catchAll(mockRequest(statusCodes.HTTP_STATUS_UNAUTHORIZED), mockToolkit)
 
-    expect(mockErrorLogger).not.toHaveBeenCalledWith(mockStack)
+    expect(mockErrorLogger).not.toHaveBeenCalled()
     expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
       pageTitle: 'Unauthorized',
       heading: statusCodes.HTTP_STATUS_UNAUTHORIZED,
@@ -64,7 +64,7 @@ describe('#catchAll', () => {
   test('Should provide expected "Bad Request" page', () => {
     catchAll(mockRequest(statusCodes.HTTP_STATUS_BAD_REQUEST), mockToolkit)
 
-    expect(mockErrorLogger).not.toHaveBeenCalledWith(mockStack)
+    expect(mockErrorLogger).not.toHaveBeenCalled()
     expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
       pageTitle: 'Bad Request',
       heading: statusCodes.HTTP_STATUS_BAD_REQUEST,
@@ -76,7 +76,7 @@ describe('#catchAll', () => {
   test('Should provide expected default page', () => {
     catchAll(mockRequest(statusCodes.HTTP_STATUS_TEAPOT), mockToolkit)
 
-    expect(mockErrorLogger).not.toHaveBeenCalledWith(mockStack)
+    expect(mockErrorLogger).not.toHaveBeenCalled()
     expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
       pageTitle: 'Something went wrong',
       heading: statusCodes.HTTP_STATUS_TEAPOT,
@@ -88,7 +88,12 @@ describe('#catchAll', () => {
   test('Should provide expected "Something went wrong" page and log error for internalServerError', () => {
     catchAll(mockRequest(statusCodes.HTTP_STATUS_INTERNAL_SERVER_ERROR), mockToolkit)
 
-    expect(mockErrorLogger).toHaveBeenCalledWith(mockStack)
+    expect(mockErrorLogger).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ stack_trace: mockStack })
+      }),
+      'Internal server error'
+    )
     expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
       pageTitle: 'Something went wrong',
       heading: statusCodes.HTTP_STATUS_INTERNAL_SERVER_ERROR,
