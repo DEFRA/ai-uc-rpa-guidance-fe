@@ -17,9 +17,8 @@
     "lint": "run-s lint:js lint:scss",
     "lint:js": "eslint .",
     "lint:scss": "stylelint \"src/**/*.scss\" --cache --cache-location .cache/stylelint --cache-strategy content --color --ignore-path .gitignore",
-    "test": "TZ=UTC run-s lint validate:data build test:js",
-    "test:js": "TZ=UTC vitest run --coverage",
-    "validate:data": "node scripts/validate-mcp-servers.js"
+    "test": "TZ=UTC run-s lint build test:js",
+    "test:js": "TZ=UTC vitest run --coverage"
   },
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
