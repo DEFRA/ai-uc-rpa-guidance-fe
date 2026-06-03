@@ -1,6 +1,7 @@
 import * as IORedis from 'ioredis'
 
 import { createLogger } from './logging/logger.js'
+import { buildErrorLog } from './logging/utils/build-error-log.js'
 
 /**
  * Setup Redis and provide a redis client
@@ -61,7 +62,7 @@ function buildRedisClient (redisConfig) {
   })
 
   redisClient.on('error', (error) => {
-    logger.error(`Redis connection error ${error}`)
+    logger.error(buildErrorLog(error, { type: 'redis_connection_error' }), 'Redis connection error')
   })
 
   return redisClient

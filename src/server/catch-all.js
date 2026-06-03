@@ -26,7 +26,7 @@ function catchAll (request, h) {
   const errorMessage = statusCodeMessage(statusCode)
 
   if (statusCode >= statusCodes.HTTP_STATUS_INTERNAL_SERVER_ERROR) {
-    request.logger.error(response?.stack)
+    request.logger.error(buildErrorLog(response, { type: 'internal_server_error' }), 'Internal server error')
   }
 
   return h

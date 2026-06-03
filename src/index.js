@@ -1,15 +1,17 @@
 import process from 'node:process'
 
-import * as serverTools from './server/server.js'
+import { createServer, startServer } from './server/server.js'
 import { createLogger } from './infra/logging/logger.js'
+import { buildErrorLog } from './infra/logging/utils/build-error-log.js'
 
-const server = await serverTools.createServer()
+const server = await createServer()
 
-await serverTools.startServer(server)
+await startServer(server)
 
 process.on('unhandledRejection', (error) => {
   const logger = createLogger()
-  logger.info('Unhandled rejection')
-  logger.error(error)
+
+  logger.error(buildErrorLog(error, { type: 'unhandled_rejection' }), 'Unhandled rejection')
+
   process.exitCode = 1
 })
