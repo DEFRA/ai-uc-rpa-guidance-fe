@@ -5,9 +5,9 @@ services:
       - '6379:6379'
     restart: always
     networks:
-      - ai-uc-guidance-fe
+      - ai-uc-rpa-guidance-fe
 
-  ai-uc-guidance-fe:
+  ai-uc-rpa-guidance-fe:
     build: ./
     ports:
       - '3000:3000'
@@ -20,8 +20,8 @@ services:
       LOCALSTACK_ENDPOINT: http://localstack:4566
       USE_SINGLE_INSTANCE_CACHE: true
     networks:
-      - ai-uc-guidance-fe
+      - ai-uc-rpa-guidance-fe
 
 networks:
-  ai-uc-guidance-fe:
+  ai-uc-rpa-guidance-fe:
     driver: bridge
