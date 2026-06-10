@@ -1,2 +1,10 @@
-// import custom component styles
-@use "heading/heading";
+@use 'defra-header';
+@use 'defra-footer';
+@use 'defra-layout';
+@use 'defra-navigation'; 
+@use 'defra-service-navigation';
+@use 'defra-tiles';
+@use 'defra-filter-chips';
+@use 'defra-channel-key';
+@use 'landing-page';
+@use 'tech-radar';
