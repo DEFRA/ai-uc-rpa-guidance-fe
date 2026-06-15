@@ -25,9 +25,9 @@ function buildSeverityCounts (findings) {
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
 async function getPublishingCheckResults (request, h) {
-  const { id } = request.params
+  const { documentId } = request.params
 
-  const result = await analyseDocument(id)
+  const result = await analyseDocument(documentId)
 
   const severityCounts = buildSeverityCounts(result.findings ?? [])
 

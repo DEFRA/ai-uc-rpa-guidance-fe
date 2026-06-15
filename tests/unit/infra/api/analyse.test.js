@@ -1,12 +1,16 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest'
-import createFetchMock from 'vitest-fetch-mock'
 
-const fetchMock = createFetchMock(vi)
+const mockGetLatestAnalysis = vi.fn()
+
+vi.mock('../../../../src/infra/api/publishing-jobs.js', () => ({
+  getLatestAnalysis: mockGetLatestAnalysis
+}))
 
 vi.mock('../../../../src/config/config.js', () => ({
   config: {
     get: vi.fn((key) => {
       if (key === 'guidanceApi.mockAnalysis') return false
+      if (key === 'guidanceApi.mockDataFile') return null
       return 'http://guidance-api.test'
     })
   }
@@ -16,16 +20,14 @@ describe('#analyseDocument', () => {
   let analyseDocument
 
   beforeEach(async () => {
-    fetchMock.enableMocks()
-    fetchMock.resetMocks()
+    vi.clearAllMocks()
     vi.resetModules()
-
     const module = await import('../../../../src/infra/api/analyse.js')
     analyseDocument = module.analyseDocument
   })
 
-  test('Should GET /guidance/documents/:id/analyse when API is available', async () => {
-    const mockResponse = {
+  test('Should return job result from getLatestAnalysis', async () => {
+    const mockResult = {
       verdict: 'ready',
       summary: 'Looks good.',
       document_title: 'Test Doc',
@@ -33,32 +35,35 @@ describe('#analyseDocument', () => {
       good_points: ['Well structured'],
       usage: { input_tokens: 100, output_tokens: 50 }
     }
-    fetchMock.mockResponseOnce(JSON.stringify(mockResponse))
+    mockGetLatestAnalysis.mockResolvedValueOnce({ result: mockResult })
 
     const result = await analyseDocument('doc-123')
 
-    expect(result).toEqual(mockResponse)
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://guidance-api.test/guidance/documents/doc-123/analyse'
-    )
+    expect(mockGetLatestAnalysis).toHaveBeenCalledWith('doc-123')
+    expect(result).toEqual(mockResult)
   })
 
-  test('Should throw with status message on non-OK response', async () => {
-    fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+  test('Should propagate errors from getLatestAnalysis', async () => {
+    const error = Object.assign(
+      new Error('Failed to get latest analysis: 404 Not Found'),
+      { statusCode: 404 }
+    )
+    mockGetLatestAnalysis.mockRejectedValueOnce(error)
 
     await expect(analyseDocument('missing-id')).rejects.toThrow(
-      'Failed to fetch analysis: 404 Not Found'
+      'Failed to get latest analysis: 404 Not Found'
     )
   })
 
-  test('Should throw on 500 server error', async () => {
-    fetchMock.mockResponseOnce('', {
-      status: 500,
-      statusText: 'Internal Server Error'
-    })
+  test('Should propagate 500 errors', async () => {
+    const error = Object.assign(
+      new Error('Failed to get latest analysis: 500 Internal Server Error'),
+      { statusCode: 500 }
+    )
+    mockGetLatestAnalysis.mockRejectedValueOnce(error)
 
     await expect(analyseDocument('any-id')).rejects.toThrow(
-      'Failed to fetch analysis: 500 Internal Server Error'
+      'Failed to get latest analysis: 500 Internal Server Error'
     )
   })
 })

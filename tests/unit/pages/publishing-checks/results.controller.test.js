@@ -16,8 +16,8 @@ const mockToolkit = {
   code: mockCode.mockReturnThis()
 }
 
-const buildRequest = (id = 'check-1') => ({
-  params: { id },
+const buildRequest = (documentId = 'check-1') => ({
+  params: { documentId },
   logger: { error: vi.fn() }
 })
 

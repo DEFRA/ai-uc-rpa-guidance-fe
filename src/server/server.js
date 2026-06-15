@@ -71,7 +71,7 @@ async function createServer () {
     options: loggerOptions
   })
 
-  await server.register([
+  const plugins = [
     requestTracing,
     metrics,
     secureContext,
@@ -83,7 +83,14 @@ async function createServer () {
     serveStaticFiles,
     viewPlugin,
     router
-  ])
+  ]
+
+  // Only enable the content security policy in non-development environments.
+  if (!config.get('isDevelopment')) {
+    plugins.push(contentSecurityPolicy)
+  }
+
+  await server.register(plugins)
 
   server.ext('onPreResponse', catchAll)
 

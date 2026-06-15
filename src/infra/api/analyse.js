@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { config } from '../../config/config.js'
 import { mockAnalysisData } from './mock-analysis-data.js'
+import { getLatestAnalysis } from './publishing-jobs.js'
 
-const guidanceApiUrl = config.get('guidanceApi.url')
 const mockAnalysisEnabled = config.get('guidanceApi.mockAnalysis')
 const mockDataFile = config.get('guidanceApi.mockDataFile')
 
@@ -35,7 +35,8 @@ const mockDataFile = config.get('guidanceApi.mockDataFile')
 
 /**
  * Fetches the QA analysis results for a guidance document.
- * Returns mock data when mockAnalysis is enabled, otherwise calls the API.
+ * Returns mock data when mockAnalysis is enabled, otherwise retrieves
+ * the latest completed analysis job from the backend.
  *
  * @param {string} documentId
  * @returns {Promise<AnalyseResponse>}
@@ -50,19 +51,8 @@ async function analyseDocument (documentId) {
     return Promise.resolve(mockAnalysisData)
   }
 
-  const url = `${guidanceApiUrl}/guidance/documents/${documentId}/analyse`
-
-  const response = await fetch(url)
-
-  if (!response.ok) {
-    const error = new Error(
-      `Failed to fetch analysis: ${response.status} ${response.statusText}`
-    )
-    error.statusCode = response.status
-    throw error
-  }
-
-  return response.json()
+  const job = await getLatestAnalysis(documentId)
+  return job.result
 }
 
 export {

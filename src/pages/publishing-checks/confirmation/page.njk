@@ -1,0 +1,35 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Publishing check started' %}
+{% set page = 'publishing-checks' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <div class="govuk-panel govuk-panel--confirmation">
+        <h1 class="govuk-panel__title">Publishing check started</h1>
+        {% if jobId %}
+          <div class="govuk-panel__body">
+            Your job reference<br>
+            <strong>{{ jobId }}</strong>
+          </div>
+        {% endif %}
+      </div>
+
+      <h2 class="govuk-heading-m">What happens next</h2>
+      <p class="govuk-body">
+        The document is being analysed for publishing quality issues.
+        This may take a few minutes. Check the publishing checks page
+        for the current status.
+      </p>
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/publishing-checks">
+          View publishing checks
+        </a>
+      </p>
+
+    </main>
+  </div>
+{% endblock %}
