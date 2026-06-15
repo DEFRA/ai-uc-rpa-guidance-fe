@@ -1,0 +1,35 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Document uploaded' %}
+{% set page = 'guidance-documents' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <div class="govuk-panel govuk-panel--confirmation">
+        <h1 class="govuk-panel__title">Document uploaded</h1>
+        {% if uploadId %}
+          <div class="govuk-panel__body">
+            Your reference<br>
+            <strong>{{ uploadId }}</strong>
+          </div>
+        {% endif %}
+      </div>
+
+      <h2 class="govuk-heading-m">What happens next</h2>
+      <p class="govuk-body">
+        Your document has been submitted for processing. It will be scanned
+        for viruses and then parsed. You can check the status on the
+        guidance documents page.
+      </p>
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/guidance-documents">
+          View guidance documents
+        </a>
+      </p>
+
+    </main>
+  </div>
+{% endblock %}

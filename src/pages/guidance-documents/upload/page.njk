@@ -1,0 +1,44 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Upload a guidance document' %}
+{% set page = 'guidance-documents' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <h1 class="govuk-heading-xl">Upload a guidance document</h1>
+
+      <p class="govuk-body">
+        Use this page to upload a Rural Payments Agency (RPA) guidance
+        document for processing and analysis.
+      </p>
+
+      <h2 class="govuk-heading-m">Before you start</h2>
+
+      <ul class="govuk-list govuk-list--bullet">
+        <li>The document must be in <strong>.docx</strong> format</li>
+        <li>The file must not contain a virus</li>
+        <li>
+          After uploading, the document will be scanned and parsed —
+          this may take a few minutes
+        </li>
+      </ul>
+
+      <div class="govuk-inset-text">
+        Only upload official RPA guidance documents. Do not upload documents
+        containing personal or sensitive information.
+      </div>
+
+      <form method="post" action="/guidance-documents/upload">
+        <input type="hidden" name="_csrf" value="{{ csrf }}">
+        <button
+          class="govuk-button"
+          data-module="govuk-button"
+          type="submit"
+        >
+          Start upload
+        </button>
+      </form>
+    </main>
+  </div>
+{% endblock %}

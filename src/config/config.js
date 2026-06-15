@@ -213,6 +213,24 @@ const config = convict({
       default: isDevelopment
     }
   },
+  guidanceApi: {
+    url: {
+      doc: 'Guidance backend API base URL',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'GUIDANCE_API_URL'
+    }
+  },
+  cdpUploader: {
+    url: {
+      doc: 'CDP Uploader base URL. Only required in development to target the local emulator',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'CDP_UPLOADER_BASE_URL'
+    }
+  },
   aceSlackChannel: {
     doc: 'Ask ACE Slack channel URL',
     format: String,
