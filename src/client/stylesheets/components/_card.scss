@@ -69,3 +69,49 @@
 .dfe-card:focus-within .dfe-card-link--header {
   color: #1d70b8;
 }
+
+.dfe-card--disabled {
+  opacity: 0.6;
+  cursor: default;
+
+  &:hover {
+    background-color: govuk-colour('white');
+    border-color: #b1b4b6;
+    box-shadow: none;
+    transform: none;
+    cursor: default;
+  }
+}
+
+// ===== Section Styling =====
+
+.dfe-tools-section {
+  margin-bottom: govuk-spacing(8);
+
+  .govuk-heading-l {
+    display: flex;
+    align-items: center;
+    gap: govuk-spacing(3);
+    flex-wrap: wrap;
+  }
+
+  .dfe-tools-section__badge {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.dfe-tools-section--management .dfe-tools-section__badge {
+  background-color: #008531;
+  color: govuk-colour('white');
+}
+
+.dfe-tools-section--agents .dfe-tools-section__badge {
+  background-color: #2b5fc7;
+  color: govuk-colour('white');
+}

@@ -1,0 +1,117 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Guidance documents' %}
+{% set page = 'guidance-documents' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <h1 class="govuk-heading-xl">Guidance documents</h1>
+
+      {% if documents | length %}
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header">Title</th>
+              <th scope="col" class="govuk-table__header">Status</th>
+              <th scope="col" class="govuk-table__header">Uploaded</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for doc in documents %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">
+                  {{ doc.title or doc.filename or 'Untitled' }}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if doc.status == 'complete' %}
+                    <strong class="govuk-tag govuk-tag--green">Complete</strong>
+                  {% elif doc.status == 'processing' %}
+                    <strong class="govuk-tag govuk-tag--yellow">Processing</strong>
+                  {% elif doc.status == 'failed' %}
+                    <strong class="govuk-tag govuk-tag--red">Failed</strong>
+                  {% else %}
+                    <strong class="govuk-tag govuk-tag--blue">Pending</strong>
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if doc.createdAt %}
+                    {{ doc.createdAt | truncate(10, true, '') }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if pagination.totalPages > 1 %}
+          <nav class="govuk-pagination" aria-label="Pagination">
+            {% if pagination.page > 1 %}
+              <div class="govuk-pagination__prev">
+                <a
+                  class="govuk-link govuk-pagination__link"
+                  href="/guidance-documents?page={{ pagination.page - 1 }}"
+                  rel="prev"
+                >
+                  <svg
+                    class="govuk-pagination__icon govuk-pagination__icon--prev"
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="13"
+                    width="15"
+                    focusable="false"
+                    aria-hidden="true"
+                    viewBox="0 0 15 13"
+                  >
+                    <path
+                      d="m6.5938-0.0078125-6.7266 6.7266
+                         6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"
+                    />
+                  </svg>
+                  <span class="govuk-pagination__link-title">Previous</span>
+                </a>
+              </div>
+            {% endif %}
+            {% if pagination.page < pagination.totalPages %}
+              <div class="govuk-pagination__next">
+                <a
+                  class="govuk-link govuk-pagination__link"
+                  href="/guidance-documents?page={{ pagination.page + 1 }}"
+                  rel="next"
+                >
+                  <span class="govuk-pagination__link-title">Next</span>
+                  <svg
+                    class="govuk-pagination__icon govuk-pagination__icon--next"
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="13"
+                    width="15"
+                    focusable="false"
+                    aria-hidden="true"
+                    viewBox="0 0 15 13"
+                  >
+                    <path
+                      d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7246z"
+                    />
+                  </svg>
+                </a>
+              </div>
+            {% endif %}
+          </nav>
+        {% endif %}
+
+      {% else %}
+        <p class="govuk-body">No guidance documents have been uploaded yet.</p>
+      {% endif %}
+
+      <a
+        href="/guidance-documents/upload"
+        role="button"
+        draggable="false"
+        class="govuk-button"
+      >
+        Upload guidance document
+      </a>
+    </main>
+  </div>
+{% endblock %}

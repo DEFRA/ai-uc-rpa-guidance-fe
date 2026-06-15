@@ -22,7 +22,7 @@ const contentSecurityPolicy = {
     frameSrc: ['self', 'data:'],
     objectSrc: ['self'],
     frameAncestors: ['none'],
-    formAction: ['self'],
+    // formAction: ['self'],
     manifestSrc: ['self'],
     generateNonces: true
   }
