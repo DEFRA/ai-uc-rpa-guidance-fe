@@ -220,6 +220,12 @@ const config = convict({
       nullable: true,
       default: null,
       env: 'GUIDANCE_API_URL'
+    },
+    mockAnalysis: {
+      doc: 'Use mock analysis data instead of calling the backend API',
+      format: Boolean,
+      default: isDevelopment,
+      env: 'GUIDANCE_API_MOCK_ANALYSIS'
     }
   },
   cdpUploader: {

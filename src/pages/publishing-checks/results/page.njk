@@ -1,0 +1,90 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/accordion/macro.njk" import govukAccordion %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set page = 'publishing-checks' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      {# ── Notification banner — verdict ──────────────────────────────── #}
+      {% if result.verdict == 'ready' %}
+        {{ govukNotificationBanner({
+          type: "success",
+          titleText: "Ready to publish",
+          html: "<p class=\"govuk-body\">" + result.summary + "</p>"
+        }) }}
+      {% else %}
+        {{ govukNotificationBanner({
+          type: "important",
+          titleText: "Not ready to publish",
+          html: "<p class=\"govuk-body\">" + result.summary + "</p>",
+          attributes: { role: "alert" }
+        }) }}
+      {% endif %}
+
+      {# ── Page heading ────────────────────────────────────────────────── #}
+      <span class="govuk-caption-m" style="color: #505a5f">Publishing quality check</span>
+      <h1 class="govuk-heading-l">{{ result.document_title }}</h1>
+
+      {# ── Issue overview ──────────────────────────────────────────────── #}
+      {% if severityCounts | length %}
+        <h2 class="govuk-heading-m">Issue overview</h2>
+        <div class="app-issue-overview">
+          {% for item in severityCounts %}
+            <div class="app-issue-overview__box">
+              {{ govukTag({
+                text: item.severity,
+                classes: {
+                  "critical": "govuk-tag--red",
+                  "high":     "govuk-tag--orange",
+                  "medium":   "govuk-tag--yellow",
+                  "low":      "govuk-tag--blue",
+                  "info":     "govuk-tag--grey"
+                }[item.severity]
+              }) }}
+              <span class="app-issue-overview__count">{{ item.count }}</span>
+              <span class="app-issue-overview__label">{{ "issue" if item.count == 1 else "issues" }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ── Findings accordion ──────────────────────────────────────────── #}
+      <h2 class="govuk-heading-m">Findings ({{ result.findings | length }})</h2>
+
+      {% if result.findings | length %}
+        {{ govukAccordion({
+          id: "findings-accordion",
+          items: result.findings | accordionItems
+        }) }}
+      {% else %}
+        <p class="govuk-body">No findings were identified.</p>
+      {% endif %}
+
+      {# ── What the document does well ─────────────────────────────────── #}
+      {% if result.good_points | length %}
+        <h2 class="govuk-heading-m">What the document does well</h2>
+        <ul class="app-tick-list">
+          {% for point in result.good_points %}
+            <li>
+              <span aria-hidden="true">✓</span>
+              <span>{{ point }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {# ── Token usage ─────────────────────────────────────────────────── #}
+      {% if result.usage %}
+        <p class="govuk-body-s" style="color: #505a5f; margin-top: 40px">
+          Token usage — input: {{ result.usage.input_tokens }} · output: {{ result.usage.output_tokens }}
+        </p>
+      {% endif %}
+
+    </main>
+  </div>
+{% endblock %}
