@@ -25,7 +25,7 @@ async function getUploadGuidanceDocument (request, h) {
  * @returns {import('@hapi/hapi').ResponseObject}
  */
 async function postUploadGuidanceDocument (request, h) {
-  const redirect = `/guidance-documents/upload/confirmation`
+  const redirect = '/guidance-documents/upload/confirmation'
 
   const { uploadId } = await initiateUpload({ redirect })
 
