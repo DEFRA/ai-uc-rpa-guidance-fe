@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { config } from '../../config/config.js'
 import { mockAnalysisData } from './mock-analysis-data.js'
 
 const guidanceApiUrl = config.get('guidanceApi.url')
 const mockAnalysisEnabled = config.get('guidanceApi.mockAnalysis')
+const mockDataFile = config.get('guidanceApi.mockDataFile')
 
 /**
  * @typedef {Object} FindingResponse
@@ -40,6 +43,10 @@ const mockAnalysisEnabled = config.get('guidanceApi.mockAnalysis')
  */
 async function analyseDocument (documentId) {
   if (mockAnalysisEnabled) {
+    if (mockDataFile) {
+      const filePath = resolve('data', mockDataFile)
+      return Promise.resolve(JSON.parse(readFileSync(filePath, 'utf8')))
+    }
     return Promise.resolve(mockAnalysisData)
   }
 

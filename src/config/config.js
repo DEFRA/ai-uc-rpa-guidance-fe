@@ -226,6 +226,13 @@ const config = convict({
       format: Boolean,
       default: isDevelopment,
       env: 'GUIDANCE_API_MOCK_ANALYSIS'
+    },
+    mockDataFile: {
+      doc: 'Filename within the data/ directory to use as mock analysis data (e.g. input-20260615T135435Z-run01.json)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'GUIDANCE_API_MOCK_DATA_FILE'
     }
   },
   cdpUploader: {

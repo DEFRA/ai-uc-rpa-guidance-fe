@@ -14,6 +14,7 @@ Core delivery platform Node.js Frontend Template.
   - [Setup](#setup)
   - [Development](#development)
   - [Production](#production)
+  - [Guidance API mock data](#guidance-api-mock-data)
   - [Npm scripts](#npm-scripts)
   - [Update dependencies](#update-dependencies)
   - [Formatting](#formatting)
@@ -104,7 +105,7 @@ npm run git:hooks
 To run the application in `development` mode run:
 
 ```bash
-npm run dev
+npm run start:dev
 ```
 
 ### Production
@@ -114,6 +115,30 @@ To mimic the application running in `production` mode locally run:
 ```bash
 npm start
 ```
+
+### Guidance API mock data
+
+By default in development, the app returns hardcoded mock analysis data instead of calling the Guidance API. Two
+environment variables control this behaviour — set them in your `.env` file or inline when starting the server.
+
+| Variable | Description | Default |
+|---|---|---|
+| `GUIDANCE_API_MOCK_ANALYSIS` | Return mock data instead of calling the API | `true` in development |
+| `GUIDANCE_API_MOCK_DATA_FILE` | Filename within `data/` to load as mock data (e.g. `input-20260615T135435Z-run01.json`). Falls back to the hardcoded mock when unset. | unset |
+
+To use a real data file as the mock response:
+
+```bash
+GUIDANCE_API_MOCK_DATA_FILE=input-20260615T135435Z-run01.json npm run start:dev
+```
+
+Or add it to `.env`:
+
+```
+GUIDANCE_API_MOCK_DATA_FILE=input-20260615T135435Z-run01.json
+```
+
+The file is read on each request, so you can swap it during a session without restarting the server.
 
 ### Npm scripts
 
