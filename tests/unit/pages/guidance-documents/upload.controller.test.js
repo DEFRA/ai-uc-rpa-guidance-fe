@@ -67,7 +67,7 @@ describe('#postUploadGuidanceDocument', () => {
     await postUploadGuidanceDocument(mockRequest, mockToolkit)
 
     expect(mockInitiateUpload).toHaveBeenCalledWith({
-      redirect: 'http://localhost:3000/guidance-documents/upload/confirmation'
+      redirect: '/guidance-documents/upload/confirmation'
     })
   })
 
