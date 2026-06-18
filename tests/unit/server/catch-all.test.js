@@ -1,3 +1,4 @@
+import { STATUS_CODES } from 'node:http'
 import { constants as statusCodes } from 'node:http2'
 
 import { vi } from 'vitest'
@@ -7,12 +8,16 @@ import { catchAll } from '../../../src/server/catch-all.js'
 const mockErrorLogger = vi.fn()
 const mockStack = 'Mock error stack'
 const errorPage = 'common/error'
-const mockRequest = (statusCode) => ({
+const mockRequest = (statusCode, customMessage) => ({
   response: {
     isBoom: true,
     stack: mockStack,
     output: {
-      statusCode
+      payload: {
+        statusCode,
+        error: STATUS_CODES[statusCode],
+        message: customMessage ?? STATUS_CODES[statusCode]
+      }
     }
   },
   logger: { error: mockErrorLogger }
@@ -83,6 +88,18 @@ describe('#catchAll', () => {
       message: 'Something went wrong'
     })
     expect(mockToolkitCode).toHaveBeenCalledWith(statusCodes.HTTP_STATUS_TEAPOT)
+  })
+
+  test('Should use boom message when explicitly overridden', () => {
+    catchAll(mockRequest(statusCodes.HTTP_STATUS_NOT_FOUND, 'No analysis found for this document'), mockToolkit)
+
+    expect(mockErrorLogger).not.toHaveBeenCalled()
+    expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
+      pageTitle: 'No analysis found for this document',
+      heading: statusCodes.HTTP_STATUS_NOT_FOUND,
+      message: 'No analysis found for this document'
+    })
+    expect(mockToolkitCode).toHaveBeenCalledWith(statusCodes.HTTP_STATUS_NOT_FOUND)
   })
 
   test('Should provide expected "Something went wrong" page and log error for internalServerError', () => {

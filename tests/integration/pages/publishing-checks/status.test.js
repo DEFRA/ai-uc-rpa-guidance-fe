@@ -94,15 +94,14 @@ describe('#publishingChecksStatusController', () => {
     expect(payload).not.toContain('aria-disabled="true"')
   })
 
-  test('Should degrade gracefully when the API is unavailable', async () => {
+  test('Should render error page when the API is unavailable', async () => {
     mockListDocuments.mockRejectedValueOnce(new Error('API down'))
 
-    const { statusCode, payload } = await server.inject({
+    const { statusCode } = await server.inject({
       method: 'GET',
       url: '/publishing-checks'
     })
 
-    expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-    expect(payload).toContain('Publishing checks')
+    expect(statusCode).toBe(statusCodes.HTTP_STATUS_INTERNAL_SERVER_ERROR)
   })
 })

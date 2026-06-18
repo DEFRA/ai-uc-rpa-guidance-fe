@@ -1,11 +1,10 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest'
-
 import { constants as statusCodes } from 'node:http2'
 
-const mockListDocuments = vi.fn()
+const mockListGuidanceDocuments = vi.fn()
 
-vi.mock('../../../../src/infra/api/guidance-documents.js', () => ({
-  listDocuments: mockListDocuments
+vi.mock('../../../../src/services/guidance-documents.js', () => ({
+  listGuidanceDocuments: mockListGuidanceDocuments
 }))
 
 const mockView = vi.fn()
@@ -35,7 +34,7 @@ describe('#getGuidanceDocuments', () => {
   })
 
   test('Should render the guidance documents list page with 200', async () => {
-    mockListDocuments.mockResolvedValueOnce(emptyResult)
+    mockListGuidanceDocuments.mockResolvedValueOnce(emptyResult)
 
     await getGuidanceDocuments(buildRequest(), mockToolkit)
 
@@ -47,7 +46,7 @@ describe('#getGuidanceDocuments', () => {
   })
 
   test('Should include home breadcrumb', async () => {
-    mockListDocuments.mockResolvedValueOnce(emptyResult)
+    mockListGuidanceDocuments.mockResolvedValueOnce(emptyResult)
 
     await getGuidanceDocuments(buildRequest(), mockToolkit)
 
@@ -56,13 +55,8 @@ describe('#getGuidanceDocuments', () => {
   })
 
   test('Should pass documents and pagination to the view', async () => {
-    const mockDoc = {
-      id: 'doc-1',
-      title: 'Test doc',
-      status: 'complete',
-      createdAt: '2026-01-01T00:00:00Z'
-    }
-    mockListDocuments.mockResolvedValueOnce({
+    const mockDoc = { id: 'doc-1', title: 'Test doc', status: 'complete' }
+    mockListGuidanceDocuments.mockResolvedValueOnce({
       items: [mockDoc],
       total: 1,
       page: 1,
@@ -78,14 +72,18 @@ describe('#getGuidanceDocuments', () => {
     )
   })
 
-  test('Should render with empty documents list when API fails', async () => {
-    const request = buildRequest()
-    mockListDocuments.mockRejectedValueOnce(new Error('API down'))
+  test('Should pass the page number from query to the service', async () => {
+    mockListGuidanceDocuments.mockResolvedValueOnce(emptyResult)
 
-    await getGuidanceDocuments(request, mockToolkit)
+    await getGuidanceDocuments(buildRequest(3), mockToolkit)
 
-    const [, viewData] = mockView.mock.calls[0]
-    expect(viewData.documents).toEqual([])
-    expect(request.logger.error).toHaveBeenCalled()
+    expect(mockListGuidanceDocuments).toHaveBeenCalledWith(3, 10)
+  })
+
+  test('Should surface service errors (no try/catch)', async () => {
+    const boom = Object.assign(new Error('Not found'), { isBoom: true, output: { statusCode: 404 } })
+    mockListGuidanceDocuments.mockRejectedValueOnce(boom)
+
+    await expect(getGuidanceDocuments(buildRequest(), mockToolkit)).rejects.toMatchObject({ isBoom: true })
   })
 })

@@ -2,7 +2,8 @@
 
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 {% from "govuk/components/accordion/macro.njk" import govukAccordion %}
-{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "components/findings-accordion/macro.njk" import findingCard %}
+{% from "components/severity/macro.njk" import severityTag %}
 
 {% set page = 'publishing-checks' %}
 
@@ -36,16 +37,7 @@
         <div class="app-issue-overview">
           {% for item in severityCounts %}
             <div class="app-issue-overview__box">
-              {{ govukTag({
-                text: item.severity,
-                classes: {
-                  "critical": "govuk-tag--red",
-                  "high":     "govuk-tag--orange",
-                  "medium":   "govuk-tag--yellow",
-                  "low":      "govuk-tag--blue",
-                  "info":     "govuk-tag--grey"
-                }[item.severity]
-              }) }}
+              {{ severityTag(item.severity) }}
               <span class="app-issue-overview__count">{{ item.count }}</span>
               <span class="app-issue-overview__label">{{ "issue" if item.count == 1 else "issues" }}</span>
             </div>
@@ -56,11 +48,20 @@
       {# ── Findings accordion ──────────────────────────────────────────── #}
       <h2 class="govuk-heading-m">Findings ({{ result.findings | length }})</h2>
 
-      {% if result.findings | length %}
-        {{ govukAccordion({
-          id: "findings-accordion",
-          items: result.findings | accordionItems
-        }) }}
+      {% if findingGroups | length %}
+        {% set accordionItems = [] %}
+        {% for group in findingGroups %}
+          {% set headingHtml %}
+            <span class="app-accordion-heading__category">{{ group.category }}</span>
+            {{ severityTag(group.worst, 'app-accordion-heading__tag') }}
+            <span class="app-accordion-heading__count govuk-body-s">{{ group.count }} {{ "issue" if group.count == 1 else "issues" }}</span>
+          {% endset %}
+          {% set contentHtml %}
+            {% for finding in group.findings %}{{ findingCard(finding) }}{% endfor %}
+          {% endset %}
+          {% if accordionItems.push({ heading: { html: headingHtml }, content: { html: contentHtml } }) %}{% endif %}
+        {% endfor %}
+        {{ govukAccordion({ id: "findings-accordion", items: accordionItems }) }}
       {% else %}
         <p class="govuk-body">No findings were identified.</p>
       {% endif %}

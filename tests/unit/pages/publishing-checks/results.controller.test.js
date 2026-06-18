@@ -1,11 +1,10 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest'
-
 import { constants as statusCodes } from 'node:http2'
 
-const mockAnalyseDocument = vi.fn()
+const mockGetCheckResults = vi.fn()
 
-vi.mock('../../../../src/infra/api/analyse.js', () => ({
-  analyseDocument: mockAnalyseDocument
+vi.mock('../../../../src/services/publishing-checks.js', () => ({
+  getCheckResults: mockGetCheckResults
 }))
 
 const mockView = vi.fn()
@@ -26,32 +25,11 @@ const mockResult = {
   summary: 'Several issues found.',
   document_title: 'RPA Guidance v2',
   findings: [
-    {
-      category: 'Clarity',
-      section: '2.1',
-      severity: 'high',
-      issue: 'Ambiguous wording',
-      why_it_matters: 'Could mislead users.',
-      recommendation: 'Rewrite section.'
-    },
-    {
-      category: 'Clarity',
-      section: '2.3',
-      severity: 'medium',
-      issue: 'Technical jargon',
-      why_it_matters: 'Not accessible.',
-      recommendation: 'Simplify language.'
-    },
-    {
-      category: 'Completeness',
-      section: '4.1',
-      severity: 'critical',
-      issue: 'Missing step',
-      why_it_matters: 'Users cannot complete task.',
-      recommendation: 'Add missing step.'
-    }
+    { category: 'Clarity', section: '2.1', severity: 'high', issue: 'A', why_it_matters: 'B', recommendation: 'C' },
+    { category: 'Clarity', section: '2.3', severity: 'medium', issue: 'D', why_it_matters: 'E', recommendation: 'F' },
+    { category: 'Completeness', section: '4.1', severity: 'critical', issue: 'G', why_it_matters: 'H', recommendation: 'I' }
   ],
-  good_points: ['Clear structure', 'Good examples'],
+  good_points: ['Clear structure'],
   usage: { input_tokens: 1200, output_tokens: 450 }
 }
 
@@ -67,7 +45,7 @@ describe('#getPublishingCheckResults', () => {
   })
 
   test('Should render results page with 200 on success', async () => {
-    mockAnalyseDocument.mockResolvedValueOnce(mockResult)
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: true, result: mockResult })
 
     await getPublishingCheckResults(buildRequest(), mockToolkit)
 
@@ -79,7 +57,7 @@ describe('#getPublishingCheckResults', () => {
   })
 
   test('Should set page to publishing-checks for nav highlighting', async () => {
-    mockAnalyseDocument.mockResolvedValueOnce(mockResult)
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: true, result: mockResult })
 
     await getPublishingCheckResults(buildRequest(), mockToolkit)
 
@@ -88,7 +66,7 @@ describe('#getPublishingCheckResults', () => {
   })
 
   test('Should pass result to the view', async () => {
-    mockAnalyseDocument.mockResolvedValueOnce(mockResult)
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: true, result: mockResult })
 
     await getPublishingCheckResults(buildRequest(), mockToolkit)
 
@@ -96,8 +74,8 @@ describe('#getPublishingCheckResults', () => {
     expect(viewData.result).toEqual(mockResult)
   })
 
-  test('Should compute severityCounts in order critical → high → medium', async () => {
-    mockAnalyseDocument.mockResolvedValueOnce(mockResult)
+  test('Should include severityCounts in view data', async () => {
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: true, result: mockResult })
 
     await getPublishingCheckResults(buildRequest(), mockToolkit)
 
@@ -109,8 +87,18 @@ describe('#getPublishingCheckResults', () => {
     ])
   })
 
+  test('Should include findingGroups in view data', async () => {
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: true, result: mockResult })
+
+    await getPublishingCheckResults(buildRequest(), mockToolkit)
+
+    const [, viewData] = mockView.mock.calls[0]
+    expect(viewData.findingGroups).toHaveLength(2)
+    expect(viewData.findingGroups[0].category).toBe('Clarity')
+  })
+
   test('Should include breadcrumbs with Publishing checks parent', async () => {
-    mockAnalyseDocument.mockResolvedValueOnce(mockResult)
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: true, result: mockResult })
 
     await getPublishingCheckResults(buildRequest('check-1'), mockToolkit)
 
@@ -122,59 +110,25 @@ describe('#getPublishingCheckResults', () => {
     ])
   })
 
-  test('Should call analyseDocument with the route param id', async () => {
-    mockAnalyseDocument.mockResolvedValueOnce(mockResult)
+  test('Should call getCheckResults with the route param id', async () => {
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: true, result: mockResult })
 
     await getPublishingCheckResults(buildRequest('my-check-id'), mockToolkit)
 
-    expect(mockAnalyseDocument).toHaveBeenCalledWith('my-check-id')
+    expect(mockGetCheckResults).toHaveBeenCalledWith('my-check-id')
   })
 
-  test('Should handle empty findings gracefully', async () => {
-    mockAnalyseDocument.mockResolvedValueOnce({
-      ...mockResult,
-      findings: []
-    })
+  test('Should throw Boom 404 when outcome is not_found', async () => {
+    mockGetCheckResults.mockResolvedValueOnce({ succeeded: false, reason: 'not_found', result: null })
 
-    await getPublishingCheckResults(buildRequest(), mockToolkit)
-
-    const [, viewData] = mockView.mock.calls[0]
-    expect(viewData.severityCounts).toEqual([])
-  })
-})
-
-describe('#buildSeverityCounts', () => {
-  let buildSeverityCounts
-
-  beforeEach(async () => {
-    vi.clearAllMocks()
-    const module = await import(
-      '../../../../src/pages/publishing-checks/results/controller.js'
-    )
-    buildSeverityCounts = module.buildSeverityCounts
+    await expect(getPublishingCheckResults(buildRequest(), mockToolkit))
+      .rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
   })
 
-  test('Should return counts in severity order', () => {
-    const findings = [
-      { severity: 'low' },
-      { severity: 'critical' },
-      { severity: 'low' },
-      { severity: 'info' }
-    ]
-    expect(buildSeverityCounts(findings)).toEqual([
-      { severity: 'critical', count: 1 },
-      { severity: 'low', count: 2 },
-      { severity: 'info', count: 1 }
-    ])
-  })
+  test('Should surface unexpected service errors', async () => {
+    const boom = Object.assign(new Error('Server error'), { isBoom: true, output: { statusCode: 500 } })
+    mockGetCheckResults.mockRejectedValueOnce(boom)
 
-  test('Should omit severities with zero findings', () => {
-    const findings = [{ severity: 'medium' }]
-    const result = buildSeverityCounts(findings)
-    expect(result.map(r => r.severity)).toEqual(['medium'])
-  })
-
-  test('Should return empty array for empty findings', () => {
-    expect(buildSeverityCounts([])).toEqual([])
+    await expect(getPublishingCheckResults(buildRequest(), mockToolkit)).rejects.toMatchObject({ isBoom: true })
   })
 })

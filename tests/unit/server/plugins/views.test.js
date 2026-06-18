@@ -3,7 +3,6 @@ import { describe, test, expect, beforeEach, vi } from 'vitest'
 const mockReadFileSync = vi.fn()
 const mockNunjucksConfigure = vi.fn()
 const mockNunjucksCompile = vi.fn()
-const mockAddFilter = vi.fn()
 
 vi.mock('node:fs', () => ({
   default: {
@@ -43,7 +42,7 @@ describe('views plugin', () => {
         }
       }))
 
-      mockNunjucksConfigure.mockReturnValue({ addFilter: mockAddFilter })
+      mockNunjucksConfigure.mockReturnValue({})
     })
 
     test('Should provide correct context properties', async () => {
@@ -115,7 +114,7 @@ describe('views plugin', () => {
 
   describe('Vite manifest handling', () => {
     beforeEach(() => {
-      mockNunjucksConfigure.mockReturnValue({ addFilter: mockAddFilter })
+      mockNunjucksConfigure.mockReturnValue({})
     })
 
     test('Should read vite manifest file', async () => {
@@ -164,7 +163,7 @@ describe('views plugin', () => {
 
   describe('getAssetPath function', () => {
     beforeEach(() => {
-      mockNunjucksConfigure.mockReturnValue({ addFilter: mockAddFilter })
+      mockNunjucksConfigure.mockReturnValue({})
     })
 
     test('Should return versioned asset path when asset exists in manifest', async () => {
@@ -244,7 +243,7 @@ describe('views plugin', () => {
   describe('Template compilation', () => {
     beforeEach(() => {
       mockReadFileSync.mockReturnValue(JSON.stringify({}))
-      mockNunjucksConfigure.mockReturnValue({ addFilter: mockAddFilter })
+      mockNunjucksConfigure.mockReturnValue({})
     })
 
     test('Should compile templates with nunjucks environment', async () => {

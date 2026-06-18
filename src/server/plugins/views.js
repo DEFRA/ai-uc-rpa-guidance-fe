@@ -5,7 +5,6 @@ import hapiVision from '@hapi/vision'
 import nunjucks from 'nunjucks'
 
 import { config } from '../../config/config.js'
-import { accordionItems } from '../../filters/accordion-items.js'
 
 const nunjucksEnvironment = nunjucks.configure(
   [
@@ -19,8 +18,6 @@ const nunjucksEnvironment = nunjucks.configure(
     lstripBlocks: true
   }
 )
-
-nunjucksEnvironment.addFilter('accordionItems', accordionItems)
 
 const assetPath = config.get('assetPath')
 const serviceName = config.get('serviceName')

@@ -2,9 +2,9 @@ import { vi, describe, test, expect, beforeEach } from 'vitest'
 
 import { constants as statusCodes } from 'node:http2'
 
-const mockInitiateUpload = vi.fn()
-vi.mock('../../../../src/infra/api/guidance-documents.js', () => ({
-  initiateUpload: mockInitiateUpload
+const mockStartUpload = vi.fn()
+vi.mock('../../../../src/services/guidance-documents.js', () => ({
+  startUpload: mockStartUpload
 }))
 
 vi.mock('../../../../src/config/config.js', () => ({
@@ -61,18 +61,16 @@ describe('#postUploadGuidanceDocument', () => {
     postUploadGuidanceDocument = module.postUploadGuidanceDocument
   })
 
-  test('Should call initiateUpload with the correct redirect URL', async () => {
-    mockInitiateUpload.mockResolvedValueOnce({ uploadId: 'test-upload-id' })
+  test('Should call startUpload with the correct redirect URL', async () => {
+    mockStartUpload.mockResolvedValueOnce({ succeeded: true, uploadId: 'test-upload-id' })
 
     await postUploadGuidanceDocument(mockRequest, mockToolkit)
 
-    expect(mockInitiateUpload).toHaveBeenCalledWith({
-      redirect: '/guidance-documents/upload/confirmation'
-    })
+    expect(mockStartUpload).toHaveBeenCalledWith('/guidance-documents/upload/confirmation')
   })
 
   test('Should redirect to the file upload page with uploadId as a query param', async () => {
-    mockInitiateUpload.mockResolvedValueOnce({ uploadId: 'test-upload-id' })
+    mockStartUpload.mockResolvedValueOnce({ succeeded: true, uploadId: 'test-upload-id' })
 
     await postUploadGuidanceDocument(mockRequest, mockToolkit)
 
@@ -80,7 +78,7 @@ describe('#postUploadGuidanceDocument', () => {
   })
 
   test('Should not use the yar session', async () => {
-    mockInitiateUpload.mockResolvedValueOnce({ uploadId: 'test-upload-id' })
+    mockStartUpload.mockResolvedValueOnce({ succeeded: true, uploadId: 'test-upload-id' })
 
     const requestWithYar = { ...mockRequest, yar: { set: vi.fn() } }
     await postUploadGuidanceDocument(requestWithYar, mockToolkit)

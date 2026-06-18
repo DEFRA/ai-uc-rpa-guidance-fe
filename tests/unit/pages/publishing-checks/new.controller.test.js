@@ -1,15 +1,15 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest'
 import { constants as statusCodes } from 'node:http2'
 
-const mockListDocuments = vi.fn()
-const mockStartAnalysis = vi.fn()
+const mockGetCompleteDocuments = vi.fn()
+const mockStartCheck = vi.fn()
 
-vi.mock('../../../../src/infra/api/guidance-documents.js', () => ({
-  listDocuments: mockListDocuments
+vi.mock('../../../../src/services/guidance-documents.js', () => ({
+  getCompleteDocuments: mockGetCompleteDocuments
 }))
 
-vi.mock('../../../../src/infra/api/publishing-jobs.js', () => ({
-  startAnalysis: mockStartAnalysis
+vi.mock('../../../../src/services/publishing-checks.js', () => ({
+  startCheck: mockStartCheck
 }))
 
 const mockView = vi.fn()
@@ -27,13 +27,10 @@ const buildRequest = (payload = {}) => ({
   logger: { error: vi.fn() }
 })
 
-const mockDocuments = {
-  items: [
-    { id: 'doc-1', title: 'Guidance A', filename: null, status: 'complete' },
-    { id: 'doc-2', title: null, filename: 'guide.docx', status: 'complete' },
-    { id: 'doc-3', title: 'Draft', filename: null, status: 'processing' }
-  ]
-}
+const mockDocuments = [
+  { id: 'doc-1', title: 'Guidance A', filename: null, status: 'complete' },
+  { id: 'doc-2', title: null, filename: 'guide.docx', status: 'complete' }
+]
 
 describe('#getNewCheck', () => {
   let getNewCheck
@@ -49,7 +46,7 @@ describe('#getNewCheck', () => {
   })
 
   test('Should render new check page with 200', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
+    mockGetCompleteDocuments.mockResolvedValueOnce(mockDocuments)
 
     await getNewCheck(buildRequest(), mockToolkit)
 
@@ -61,7 +58,7 @@ describe('#getNewCheck', () => {
   })
 
   test('Should only include complete documents in select items', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
+    mockGetCompleteDocuments.mockResolvedValueOnce(mockDocuments)
 
     await getNewCheck(buildRequest(), mockToolkit)
 
@@ -70,23 +67,19 @@ describe('#getNewCheck', () => {
       .filter((item) => item.value)
       .map((item) => item.value)
     expect(values).toEqual(['doc-1', 'doc-2'])
-    expect(values).not.toContain('doc-3')
   })
 
   test('Should include a blank first item in selectItems', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
+    mockGetCompleteDocuments.mockResolvedValueOnce(mockDocuments)
 
     await getNewCheck(buildRequest(), mockToolkit)
 
     const [, viewData] = mockView.mock.calls[0]
-    expect(viewData.selectItems[0]).toEqual({
-      value: '',
-      text: 'Select a document'
-    })
+    expect(viewData.selectItems[0]).toEqual({ value: '', text: 'Select a document' })
   })
 
   test('Should set hasDocuments true when complete docs exist', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
+    mockGetCompleteDocuments.mockResolvedValueOnce(mockDocuments)
 
     await getNewCheck(buildRequest(), mockToolkit)
 
@@ -94,10 +87,8 @@ describe('#getNewCheck', () => {
     expect(viewData.hasDocuments).toBe(true)
   })
 
-  test('Should set hasDocuments false when no complete docs', async () => {
-    mockListDocuments.mockResolvedValueOnce({
-      items: [{ id: 'doc-3', title: 'Draft', status: 'processing' }]
-    })
+  test('Should set hasDocuments false when no documents', async () => {
+    mockGetCompleteDocuments.mockResolvedValueOnce([])
 
     await getNewCheck(buildRequest(), mockToolkit)
 
@@ -105,13 +96,11 @@ describe('#getNewCheck', () => {
     expect(viewData.hasDocuments).toBe(false)
   })
 
-  test('Should degrade gracefully when listDocuments fails', async () => {
-    mockListDocuments.mockRejectedValueOnce(new Error('API down'))
+  test('Should surface service errors (no try/catch)', async () => {
+    const boom = Object.assign(new Error('API down'), { isBoom: true })
+    mockGetCompleteDocuments.mockRejectedValueOnce(boom)
 
-    await getNewCheck(buildRequest(), mockToolkit)
-
-    const [, viewData] = mockView.mock.calls[0]
-    expect(viewData.hasDocuments).toBe(false)
+    await expect(getNewCheck(buildRequest(), mockToolkit)).rejects.toMatchObject({ isBoom: true })
   })
 })
 
@@ -129,11 +118,7 @@ describe('#postNewCheck', () => {
   })
 
   test('Should redirect to confirmation with jobId on success', async () => {
-    mockListDocuments.mockResolvedValue(mockDocuments)
-    mockStartAnalysis.mockResolvedValueOnce({
-      jobId: 'job-xyz',
-      status: 'pending'
-    })
+    mockStartCheck.mockResolvedValueOnce({ succeeded: true, jobId: 'job-xyz', reason: null })
 
     await postNewCheck(buildRequest({ documentId: 'doc-1' }), mockToolkit)
 
@@ -142,22 +127,9 @@ describe('#postNewCheck', () => {
     )
   })
 
-  test('Should re-render with error when documentId is empty', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
-
-    await postNewCheck(buildRequest({ documentId: '' }), mockToolkit)
-
-    const [, viewData] = mockView.mock.calls[0]
-    expect(viewData.errorMessage).toBe('Select a document to analyse')
-    expect(viewData.showSelectError).toBe(true)
-  })
-
-  test('Should re-render with 409 error message', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
-    const conflict = Object.assign(new Error('Conflict'), {
-      statusCode: 409
-    })
-    mockStartAnalysis.mockRejectedValueOnce(conflict)
+  test('Should re-render with conflict message for 409', async () => {
+    mockStartCheck.mockResolvedValueOnce({ succeeded: false, reason: 'conflict', jobId: null })
+    mockGetCompleteDocuments.mockResolvedValueOnce(mockDocuments)
 
     await postNewCheck(buildRequest({ documentId: 'doc-1' }), mockToolkit)
 
@@ -165,12 +137,9 @@ describe('#postNewCheck', () => {
     expect(viewData.errorMessage).toContain('not been fully processed')
   })
 
-  test('Should re-render with 404 error message', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
-    const notFound = Object.assign(new Error('Not Found'), {
-      statusCode: 404
-    })
-    mockStartAnalysis.mockRejectedValueOnce(notFound)
+  test('Should re-render with not-found message for 404', async () => {
+    mockStartCheck.mockResolvedValueOnce({ succeeded: false, reason: 'not_found', jobId: null })
+    mockGetCompleteDocuments.mockResolvedValueOnce(mockDocuments)
 
     await postNewCheck(buildRequest({ documentId: 'doc-1' }), mockToolkit)
 
@@ -178,23 +147,21 @@ describe('#postNewCheck', () => {
     expect(viewData.errorMessage).toContain('could not be found')
   })
 
-  test('Should re-render with generic error on unexpected failure', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
-    mockStartAnalysis.mockRejectedValueOnce(new Error('Network error'))
-
-    await postNewCheck(buildRequest({ documentId: 'doc-1' }), mockToolkit)
-
-    const [, viewData] = mockView.mock.calls[0]
-    expect(viewData.errorMessage).toContain('Something went wrong')
-  })
-
   test('Should not set showSelectError for API errors', async () => {
-    mockListDocuments.mockResolvedValueOnce(mockDocuments)
-    mockStartAnalysis.mockRejectedValueOnce(new Error('API error'))
+    mockStartCheck.mockResolvedValueOnce({ succeeded: false, reason: 'conflict', jobId: null })
+    mockGetCompleteDocuments.mockResolvedValueOnce(mockDocuments)
 
     await postNewCheck(buildRequest({ documentId: 'doc-1' }), mockToolkit)
 
     const [, viewData] = mockView.mock.calls[0]
     expect(viewData.showSelectError).toBeFalsy()
+  })
+
+  test('Should surface unexpected service errors to catch-all', async () => {
+    const boom = Object.assign(new Error('Network error'), { isBoom: true, output: { statusCode: 500 } })
+    mockStartCheck.mockRejectedValueOnce(boom)
+
+    await expect(postNewCheck(buildRequest({ documentId: 'doc-1' }), mockToolkit))
+      .rejects.toMatchObject({ isBoom: true })
   })
 })

@@ -94,7 +94,7 @@ describe('#newCheckController', () => {
       )
     })
 
-    test('Should re-render with error when no document selected', async () => {
+    test('Should re-render with error and 400 when no document selected', async () => {
       mockListDocuments.mockResolvedValueOnce({ items: [] })
 
       const { statusCode, payload } = await server.inject({
@@ -103,7 +103,7 @@ describe('#newCheckController', () => {
         payload: { documentId: '' }
       })
 
-      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_BAD_REQUEST)
       expect(payload).toContain('There is a problem')
       expect(payload).toContain('Select a document to analyse')
     })
