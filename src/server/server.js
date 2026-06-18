@@ -84,9 +84,9 @@ async function createServer () {
     router
   ]
 
-  // Disable the content security policy plugin if the CDP Uploader URL
-  // is configured for local development
-  if (!config.get('cdpUploader.url')) {
+  // Disable the content security policy plugin if the CDP Uploader browser URL
+  // is configured for local development (browser posts directly to an external origin)
+  if (!config.get('cdpUploader.browserUrl')) {
     plugins.push(contentSecurityPolicy)
   }
 
