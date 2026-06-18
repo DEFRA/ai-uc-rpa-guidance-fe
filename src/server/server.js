@@ -78,15 +78,15 @@ async function createServer () {
     pulse,
     sessionCache,
     Scooter,
-    contentSecurityPolicy,
     HapiInert,
     serveStaticFiles,
     viewPlugin,
     router
   ]
 
-  // Only enable the content security policy in non-development environments.
-  if (!config.get('isDevelopment')) {
+  // Disable the content security policy plugin if the CDP Uploader URL
+  // is configured for local development
+  if (!config.get('cdpUploader.url')) {
     plugins.push(contentSecurityPolicy)
   }
 

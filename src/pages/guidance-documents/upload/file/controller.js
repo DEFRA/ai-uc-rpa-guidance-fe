@@ -3,7 +3,7 @@ import Boom from '@hapi/boom'
 import { statusCodes } from '../../../../constants/status-codes.js'
 import { config } from '../../../../config/config.js'
 
-const cdpUploaderBase = config.get('cdpUploader.url')
+const cdpUploaderBase = "http://localhost:7337"
 
 /**
  * Reads uploadId from the query string, constructs the CDP upload URL,
