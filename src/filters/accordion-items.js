@@ -37,6 +37,28 @@ function worstSeverity (findings) {
 }
 
 /**
+ * Converts unquoted markdown hyperlinks and bare parenthesised URLs to HTML anchors.
+ * Links surrounded by backticks, single quotes, or double quotes are left as-is.
+ * Handles two formats:
+ *   [anchor text](url)  →  <a href="url">anchor text</a>
+ *   (url)               →  <a href="url">url</a>  (bare URL, not preceded by ])
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function renderLinks (text) {
+  return text
+    .replace(
+      /(?<![`'"])\[([^\]]+)\]\(([^)]+)\)(?![`'"])/g,
+      '<a href="$2" class="govuk-link" target="_blank" rel="noopener noreferrer">$1</a>'
+    )
+    .replace(
+      /(?<!\])\((https?:\/\/[^)]+)\)/g,
+      '<a href="$1" class="govuk-link" target="_blank" rel="noopener noreferrer">$1</a>'
+    )
+}
+
+/**
  * Renders a single finding card as an HTML string.
  *
  * @param {import('../infra/api/analyse.js').FindingResponse} finding
@@ -55,15 +77,15 @@ function renderFindingCard (finding) {
   <dl class="app-finding-card__body">
     <div class="app-finding-card__row">
       <dt>Issue</dt>
-      <dd>${finding.issue}</dd>
+      <dd>${renderLinks(finding.issue)}</dd>
     </div>
     <div class="app-finding-card__row">
       <dt>Why it matters</dt>
-      <dd>${finding.why_it_matters}</dd>
+      <dd>${renderLinks(finding.why_it_matters)}</dd>
     </div>
     <div class="app-finding-card__row">
       <dt>Recommendation</dt>
-      <dd>${finding.recommendation}</dd>
+      <dd>${renderLinks(finding.recommendation)}</dd>
     </div>
   </dl>
 </div>`.trim()
