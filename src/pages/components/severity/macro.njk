@@ -1,0 +1,10 @@
+{% macro severityTag(severity, classes='') %}
+  {% set _class = {
+    critical: 'govuk-tag--red',
+    high:     'govuk-tag--orange',
+    medium:   'govuk-tag--yellow',
+    low:      'govuk-tag--blue',
+    info:     'govuk-tag--grey'
+  }[severity] %}
+  <strong class="govuk-tag {{ _class }}{% if classes %} {{ classes }}{% endif %}">{{ severity }}</strong>
+{% endmacro %}

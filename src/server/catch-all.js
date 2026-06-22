@@ -1,19 +1,25 @@
 import { statusCodes } from '../constants/status-codes.js'
 import { buildErrorLog } from '../infra/logging/utils/build-error-log.js'
 
-function statusCodeMessage (statusCode) {
-  switch (statusCode) {
-    case statusCodes.HTTP_STATUS_NOT_FOUND:
-      return 'Page not found'
-    case statusCodes.HTTP_STATUS_FORBIDDEN:
-      return 'Forbidden'
-    case statusCodes.HTTP_STATUS_UNAUTHORIZED:
-      return 'Unauthorized'
-    case statusCodes.HTTP_STATUS_BAD_REQUEST:
-      return 'Bad Request'
-    default:
-      return 'Something went wrong'
+const DEFAULT_BOOM_500_MESSAGE = 'An internal server error occurred'
+
+const STATUS_CODE_MESSAGES = {
+  [statusCodes.HTTP_STATUS_NOT_FOUND]: 'Page not found',
+  [statusCodes.HTTP_STATUS_FORBIDDEN]: 'Forbidden',
+  [statusCodes.HTTP_STATUS_UNAUTHORIZED]: 'Unauthorized',
+  [statusCodes.HTTP_STATUS_BAD_REQUEST]: 'Bad Request'
+}
+
+function statusCodeMessage (boom) {
+  const { payload } = boom.output
+  const { error, message, statusCode } = payload
+
+  // Check if a custom boom error message is provided, if so, return it
+  if ((error !== message) && message !== DEFAULT_BOOM_500_MESSAGE) {
+    return message
   }
+
+  return STATUS_CODE_MESSAGES[statusCode] ?? 'Something went wrong'
 }
 
 function catchAll (request, h) {
@@ -23,20 +29,21 @@ function catchAll (request, h) {
     return h.continue
   }
 
-  const statusCode = response.output.statusCode
-  const errorMessage = statusCodeMessage(statusCode)
+  const { payload } = response.output
 
-  if (statusCode >= statusCodes.HTTP_STATUS_INTERNAL_SERVER_ERROR) {
+  const errorMessage = statusCodeMessage(response)
+
+  if (payload.statusCode >= statusCodes.HTTP_STATUS_INTERNAL_SERVER_ERROR) {
     request.logger.error(buildErrorLog(response, { type: 'internal_server_error' }), 'Internal server error')
   }
 
   return h
     .view('common/error', {
       pageTitle: errorMessage,
-      heading: statusCode,
+      heading: payload.statusCode,
       message: errorMessage
     })
-    .code(statusCode)
+    .code(payload.statusCode)
 }
 
 export {

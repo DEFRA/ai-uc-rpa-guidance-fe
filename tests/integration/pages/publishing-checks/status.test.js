@@ -9,14 +9,10 @@ const { mockGetLatestAnalysis } = vi.hoisted(() => ({
   mockGetLatestAnalysis: vi.fn()
 }))
 
-vi.mock('../../../../src/infra/api/guidance-documents.js', () => ({
-  listDocuments: mockListDocuments
-}))
-
-vi.mock('../../../../src/infra/api/publishing-jobs.js', () => ({
+vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
+  listDocuments: mockListDocuments,
   getLatestAnalysis: mockGetLatestAnalysis,
-  startAnalysis: vi.fn(),
-  getJob: vi.fn()
+  startAnalysis: vi.fn()
 }))
 
 import { createServer } from '../../../../src/server/server.js'
@@ -34,7 +30,7 @@ describe('#publishingChecksStatusController', () => {
   })
 
   test('Should respond with 200 and render the status page', async () => {
-    mockListDocuments.mockResolvedValueOnce({ items: [] })
+    mockListDocuments.mockResolvedValueOnce({ ok: true, data: { items: [] } })
 
     const { statusCode, payload } = await server.inject({
       method: 'GET',
@@ -46,7 +42,7 @@ describe('#publishingChecksStatusController', () => {
   })
 
   test('Should render a link to start a new publishing check', async () => {
-    mockListDocuments.mockResolvedValueOnce({ items: [] })
+    mockListDocuments.mockResolvedValueOnce({ ok: true, data: { items: [] } })
 
     const { payload } = await server.inject({
       method: 'GET',
@@ -58,12 +54,12 @@ describe('#publishingChecksStatusController', () => {
 
   test('Should show disabled View button for non-completed runs', async () => {
     mockListDocuments.mockResolvedValueOnce({
-      items: [{ id: 'doc-1', title: 'Guide', status: 'complete' }]
+      ok: true,
+      data: { items: [{ id: 'doc-1', title: 'Guide', status: 'complete' }] }
     })
     mockGetLatestAnalysis.mockResolvedValueOnce({
-      jobId: 'job-1',
-      status: 'pending',
-      updatedAt: '2026-06-15T10:00:00Z'
+      ok: true,
+      data: { jobId: 'job-1', status: 'pending', updatedAt: '2026-06-15T10:00:00Z' }
     })
 
     const { payload } = await server.inject({
@@ -77,12 +73,12 @@ describe('#publishingChecksStatusController', () => {
 
   test('Should show enabled View link for completed runs', async () => {
     mockListDocuments.mockResolvedValueOnce({
-      items: [{ id: 'doc-1', title: 'Guide', status: 'complete' }]
+      ok: true,
+      data: { items: [{ id: 'doc-1', title: 'Guide', status: 'complete' }] }
     })
     mockGetLatestAnalysis.mockResolvedValueOnce({
-      jobId: 'job-1',
-      status: 'completed',
-      updatedAt: '2026-06-15T10:00:00Z'
+      ok: true,
+      data: { jobId: 'job-1', status: 'completed', updatedAt: '2026-06-15T10:00:00Z' }
     })
 
     const { payload } = await server.inject({
@@ -94,15 +90,14 @@ describe('#publishingChecksStatusController', () => {
     expect(payload).not.toContain('aria-disabled="true"')
   })
 
-  test('Should degrade gracefully when the API is unavailable', async () => {
+  test('Should render error page when the API is unavailable', async () => {
     mockListDocuments.mockRejectedValueOnce(new Error('API down'))
 
-    const { statusCode, payload } = await server.inject({
+    const { statusCode } = await server.inject({
       method: 'GET',
       url: '/publishing-checks'
     })
 
-    expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-    expect(payload).toContain('Publishing checks')
+    expect(statusCode).toBe(statusCodes.HTTP_STATUS_INTERNAL_SERVER_ERROR)
   })
 })

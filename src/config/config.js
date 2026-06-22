@@ -217,7 +217,6 @@ const config = convict({
     url: {
       doc: 'Guidance backend API base URL',
       format: String,
-      nullable: true,
       default: null,
       env: 'GUIDANCE_API_URL'
     }

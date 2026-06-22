@@ -5,7 +5,7 @@ const { mockInitiateUpload } = vi.hoisted(() => ({
   mockInitiateUpload: vi.fn()
 }))
 
-vi.mock('../../../../src/infra/api/guidance-documents.js', () => ({
+vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
   initiateUpload: mockInitiateUpload
 }))
 
@@ -45,21 +45,31 @@ describe('#guidanceDocumentsUploadController', () => {
   })
 
   describe('POST /guidance-documents/upload', () => {
-    test('Should call the guidance API and redirect to the file upload page with uploadId', async () => {
-      mockInitiateUpload.mockResolvedValueOnce({ uploadId: 'test-upload-id' })
+    test(
+      'Should call the guidance API and redirect to the file upload page with uploadId',
+      async () => {
+        mockInitiateUpload.mockResolvedValueOnce({
+          ok: true,
+          data: { uploadId: 'test-upload-id' }
+        })
 
-      const { statusCode, headers } = await server.inject({
-        method: 'POST',
-        url: '/guidance-documents/upload',
-        payload: {}
-      })
+        const { statusCode, headers } = await server.inject({
+          method: 'POST',
+          url: '/guidance-documents/upload',
+          payload: {}
+        })
 
-      expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
-      expect(headers.location).toBe('/guidance-documents/upload/file?uploadId=test-upload-id')
-    })
+        expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
+        expect(headers.location).toBe(
+          '/guidance-documents/upload/file?uploadId=test-upload-id'
+        )
+      }
+    )
 
     test('Should return 500 when the guidance API fails', async () => {
-      mockInitiateUpload.mockRejectedValueOnce(new Error('Guidance API unavailable'))
+      mockInitiateUpload.mockRejectedValueOnce(
+        new Error('Guidance API unavailable')
+      )
 
       const { statusCode } = await server.inject({
         method: 'POST',
