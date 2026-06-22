@@ -220,19 +220,6 @@ const config = convict({
       nullable: true,
       default: null,
       env: 'GUIDANCE_API_URL'
-    },
-    mockAnalysis: {
-      doc: 'Use mock analysis data instead of calling the backend API',
-      format: Boolean,
-      default: isDevelopment,
-      env: 'GUIDANCE_API_MOCK_ANALYSIS'
-    },
-    mockDataFile: {
-      doc: 'Filename within the data/ directory to use as mock analysis data (e.g. input-20260615T135435Z-run01.json)',
-      format: String,
-      nullable: true,
-      default: null,
-      env: 'GUIDANCE_API_MOCK_DATA_FILE'
     }
   },
   cdpUploader: {

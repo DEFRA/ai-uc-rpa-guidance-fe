@@ -31,7 +31,7 @@ async function getPublishingChecksStatus (request, h) {
           updatedAt: job.updatedAt
         }
       } catch (error) {
-        if (error.statusCode === 404) {
+        if (error.statusCode === statusCodes.HTTP_STATUS_NOT_FOUND) {
           return {
             documentId: doc.id,
             title,

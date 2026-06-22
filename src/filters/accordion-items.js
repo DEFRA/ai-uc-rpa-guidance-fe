@@ -1,6 +1,9 @@
 /** @type {Record<string, string>} */
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
 
+/** Fallback rank for severities not present in SEVERITY_ORDER (treated as lowest priority). */
+const UNKNOWN_SEVERITY_RANK = 99
+
 /** @type {Record<string, string>} */
 const SEVERITY_TAG_CLASS = {
   critical: 'govuk-tag--red',
@@ -27,7 +30,7 @@ const SEVERITY_BORDER_COLOUR = {
  */
 function worstSeverity (findings) {
   return findings.reduce((worst, f) => {
-    return (SEVERITY_ORDER[f.severity] ?? 99) < (SEVERITY_ORDER[worst] ?? 99)
+    return (SEVERITY_ORDER[f.severity] ?? UNKNOWN_SEVERITY_RANK) < (SEVERITY_ORDER[worst] ?? UNKNOWN_SEVERITY_RANK)
       ? f.severity
       : worst
   }, 'info')
@@ -117,6 +120,7 @@ export {
   accordionItems,
   worstSeverity,
   SEVERITY_ORDER,
+  UNKNOWN_SEVERITY_RANK,
   SEVERITY_TAG_CLASS,
   SEVERITY_BORDER_COLOUR
 }

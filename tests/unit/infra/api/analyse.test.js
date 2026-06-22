@@ -6,16 +6,6 @@ vi.mock('../../../../src/infra/api/publishing-jobs.js', () => ({
   getLatestAnalysis: mockGetLatestAnalysis
 }))
 
-vi.mock('../../../../src/config/config.js', () => ({
-  config: {
-    get: vi.fn((key) => {
-      if (key === 'guidanceApi.mockAnalysis') return false
-      if (key === 'guidanceApi.mockDataFile') return null
-      return 'http://guidance-api.test'
-    })
-  }
-}))
-
 describe('#analyseDocument', () => {
   let analyseDocument
 

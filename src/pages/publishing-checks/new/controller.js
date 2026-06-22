@@ -2,6 +2,17 @@ import { statusCodes } from '../../../constants/status-codes.js'
 import { listDocuments } from '../../../infra/api/guidance-documents.js'
 import { startAnalysis } from '../../../infra/api/publishing-jobs.js'
 
+function getErrorMessage (statusCode) {
+  switch (statusCode) {
+    case statusCodes.HTTP_STATUS_CONFLICT:
+      return 'This document has not been fully processed yet. Try again later.'
+    case statusCodes.HTTP_STATUS_NOT_FOUND:
+      return 'The selected document could not be found. Select another.'
+    default:
+      return 'Something went wrong. Please try again.'
+  }
+}
+
 async function fetchDocumentOptions (logger) {
   try {
     const result = await listDocuments()
@@ -74,14 +85,7 @@ async function postNewCheck (request, h) {
   } catch (error) {
     request.logger.error(error, 'Failed to start analysis')
 
-    let errorMessage = 'Something went wrong. Please try again.'
-    if (error.statusCode === 409) {
-      errorMessage =
-        'This document has not been fully processed yet. Try again later.'
-    } else if (error.statusCode === 404) {
-      errorMessage =
-        'The selected document could not be found. Select another.'
-    }
+    const errorMessage = getErrorMessage(error.statusCode)
 
     return renderNewCheckPage(request, h, { errorMessage })
   }
