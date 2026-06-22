@@ -9,14 +9,10 @@ const { mockStartAnalysis } = vi.hoisted(() => ({
   mockStartAnalysis: vi.fn()
 }))
 
-vi.mock('../../../../src/infra/api/guidance-documents.js', () => ({
-  listDocuments: mockListDocuments
-}))
-
-vi.mock('../../../../src/infra/api/publishing-jobs.js', () => ({
+vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
+  listDocuments: mockListDocuments,
   startAnalysis: mockStartAnalysis,
-  getLatestAnalysis: vi.fn(),
-  getJob: vi.fn()
+  getLatestAnalysis: vi.fn()
 }))
 
 import { createServer } from '../../../../src/server/server.js'
@@ -35,7 +31,7 @@ describe('#newCheckController', () => {
 
   describe('GET /publishing-checks/start', () => {
     test('Should respond with 200 and render the new check page', async () => {
-      mockListDocuments.mockResolvedValueOnce({ items: [] })
+      mockListDocuments.mockResolvedValueOnce({ ok: true, data: { items: [] } })
 
       const { statusCode, payload } = await server.inject({
         method: 'GET',
@@ -47,7 +43,7 @@ describe('#newCheckController', () => {
     })
 
     test('Should show empty state when no documents are available', async () => {
-      mockListDocuments.mockResolvedValueOnce({ items: [] })
+      mockListDocuments.mockResolvedValueOnce({ ok: true, data: { items: [] } })
 
       const { payload } = await server.inject({
         method: 'GET',
@@ -59,9 +55,10 @@ describe('#newCheckController', () => {
 
     test('Should render select when complete documents exist', async () => {
       mockListDocuments.mockResolvedValueOnce({
-        items: [
-          { id: 'doc-1', title: 'Guide A', status: 'complete' }
-        ]
+        ok: true,
+        data: {
+          items: [{ id: 'doc-1', title: 'Guide A', status: 'complete' }]
+        }
       })
 
       const { payload } = await server.inject({
@@ -76,10 +73,10 @@ describe('#newCheckController', () => {
 
   describe('POST /publishing-checks/start', () => {
     test('Should redirect to confirmation page with jobId on success', async () => {
-      mockListDocuments.mockResolvedValue({ items: [] })
+      mockListDocuments.mockResolvedValue({ ok: true, data: { items: [] } })
       mockStartAnalysis.mockResolvedValueOnce({
-        jobId: 'job-999',
-        status: 'pending'
+        ok: true,
+        data: { jobId: 'job-999', status: 'pending' }
       })
 
       const { statusCode, headers } = await server.inject({
@@ -95,7 +92,7 @@ describe('#newCheckController', () => {
     })
 
     test('Should re-render with error and 400 when no document selected', async () => {
-      mockListDocuments.mockResolvedValueOnce({ items: [] })
+      mockListDocuments.mockResolvedValueOnce({ ok: true, data: { items: [] } })
 
       const { statusCode, payload } = await server.inject({
         method: 'POST',

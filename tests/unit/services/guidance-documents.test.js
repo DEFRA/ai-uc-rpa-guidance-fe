@@ -4,7 +4,7 @@ const mockInitiateUpload = vi.fn()
 const mockListDocuments = vi.fn()
 const mockGetDocument = vi.fn()
 
-vi.mock('../../../src/infra/api/guidance-documents.js', () => ({
+vi.mock('../../../src/infra/api/guidance-api.js', () => ({
   initiateUpload: mockInitiateUpload,
   listDocuments: mockListDocuments,
   getDocument: mockGetDocument
@@ -23,21 +23,16 @@ describe('guidance-documents service', () => {
       ;({ listGuidanceDocuments } = await import('../../../src/services/guidance-documents.js'))
     })
 
-    test('Should return a succeeded outcome with paginated data', async () => {
-      mockListDocuments.mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 10 })
+    test('Should return paginated data', async () => {
+      const data = { items: [], total: 0, page: 1, pageSize: 10 }
+      mockListDocuments.mockResolvedValueOnce({ ok: true, data })
 
-      const outcome = await listGuidanceDocuments(1, 10)
-      expect(outcome.succeeded).toBe(true)
-      expect(outcome.items).toEqual([])
-      expect(outcome.total).toBe(0)
-      expect(outcome.page).toBe(1)
-      expect(outcome.pageSize).toBe(10)
-    })
+      const result = await listGuidanceDocuments(1, 10)
 
-    test('Should propagate 404 API error', async () => {
-      mockListDocuments.mockRejectedValueOnce(Object.assign(new Error('Not found'), { statusCode: 404 }))
-
-      await expect(listGuidanceDocuments()).rejects.toMatchObject({ statusCode: 404 })
+      expect(result.items).toEqual([])
+      expect(result.total).toBe(0)
+      expect(result.page).toBe(1)
+      expect(result.pageSize).toBe(10)
     })
 
     test('Should propagate unexpected errors', async () => {
@@ -57,11 +52,14 @@ describe('guidance-documents service', () => {
 
     test('Should return only documents with status complete', async () => {
       mockListDocuments.mockResolvedValueOnce({
-        items: [
-          { id: 'doc-1', status: 'complete' },
-          { id: 'doc-2', status: 'processing' },
-          { id: 'doc-3', status: 'complete' }
-        ]
+        ok: true,
+        data: {
+          items: [
+            { id: 'doc-1', status: 'complete' },
+            { id: 'doc-2', status: 'processing' },
+            { id: 'doc-3', status: 'complete' }
+          ]
+        }
       })
 
       const result = await getCompleteDocuments()
@@ -70,7 +68,8 @@ describe('guidance-documents service', () => {
 
     test('Should return empty array when no complete documents', async () => {
       mockListDocuments.mockResolvedValueOnce({
-        items: [{ id: 'doc-1', status: 'processing' }]
+        ok: true,
+        data: { items: [{ id: 'doc-1', status: 'processing' }] }
       })
 
       const result = await getCompleteDocuments()
@@ -92,17 +91,24 @@ describe('guidance-documents service', () => {
       ;({ startUpload } = await import('../../../src/services/guidance-documents.js'))
     })
 
-    test('Should return a succeeded outcome with uploadId', async () => {
-      mockInitiateUpload.mockResolvedValueOnce({ uploadId: 'upload-123' })
+    test('Should return data with uploadId', async () => {
+      mockInitiateUpload.mockResolvedValueOnce({
+        ok: true,
+        data: { uploadId: 'upload-123' }
+      })
 
-      const outcome = await startUpload('/confirmation')
-      expect(outcome.succeeded).toBe(true)
-      expect(outcome.uploadId).toBe('upload-123')
-      expect(mockInitiateUpload).toHaveBeenCalledWith({ redirect: '/confirmation' })
+      const result = await startUpload('/confirmation')
+
+      expect(result.uploadId).toBe('upload-123')
+      expect(mockInitiateUpload).toHaveBeenCalledWith({
+        redirect: '/confirmation'
+      })
     })
 
-    test('Should propagate 400 API error', async () => {
-      mockInitiateUpload.mockRejectedValueOnce(Object.assign(new Error('Bad request'), { statusCode: 400 }))
+    test('Should propagate API errors', async () => {
+      mockInitiateUpload.mockRejectedValueOnce(
+        Object.assign(new Error('Bad request'), { statusCode: 400 })
+      )
 
       await expect(startUpload('/x')).rejects.toMatchObject({ statusCode: 400 })
     })
@@ -118,7 +124,7 @@ describe('guidance-documents service', () => {
 
     test('Should return a succeeded outcome with document data', async () => {
       const mockDoc = { id: 'doc-1', title: 'Test', status: 'complete' }
-      mockGetDocument.mockResolvedValueOnce(mockDoc)
+      mockGetDocument.mockResolvedValueOnce({ ok: true, data: mockDoc })
 
       const outcome = await fetchDocument('doc-1')
       expect(outcome.succeeded).toBe(true)
@@ -126,7 +132,7 @@ describe('guidance-documents service', () => {
     })
 
     test('Should return a failed outcome with reason not_found for 404', async () => {
-      mockGetDocument.mockRejectedValueOnce(Object.assign(new Error('Not found'), { statusCode: 404 }))
+      mockGetDocument.mockResolvedValueOnce({ ok: false, status: 404, data: null })
 
       const outcome = await fetchDocument('doc-1')
       expect(outcome.succeeded).toBe(false)

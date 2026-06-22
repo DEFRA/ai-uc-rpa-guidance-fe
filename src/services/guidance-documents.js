@@ -1,20 +1,14 @@
-import {
-  getDocument,
-  initiateUpload,
-  listDocuments
-} from '../infra/api/guidance-documents.js'
-import { FetchDocumentOutcome } from '../models/fetch-document-outcome.js'
-import { ListDocumentsOutcome } from '../models/list-documents-outcome.js'
-import { StartUploadOutcome } from '../models/start-upload-outcome.js'
+import * as guidanceApi from '../infra/api/guidance-api.js'
+import { FetchDocumentOutcome } from '../models/guidance-documents.js'
 
 /**
  * @param {number} [page=1]
  * @param {number} [pageSize=10]
- * @returns {Promise<ListDocumentsOutcome>}
+ * @returns {Promise<object>} Paginated document list
  */
 async function listGuidanceDocuments (page = 1, pageSize = 10) {
-  const data = await listDocuments(page, pageSize)
-  return ListDocumentsOutcome.success(data, data)
+  const res = await guidanceApi.listDocuments(page, pageSize)
+  return res.data
 }
 
 /**
@@ -24,17 +18,17 @@ async function listGuidanceDocuments (page = 1, pageSize = 10) {
  * @returns {Promise<object[]>}
  */
 async function getCompleteDocuments () {
-  const result = await listDocuments()
-  return result.items.filter(doc => doc.status === 'complete')
+  const res = await guidanceApi.listDocuments()
+  return res.data.items.filter((doc) => doc.status === 'complete')
 }
 
 /**
  * @param {string} redirect
- * @returns {Promise<StartUploadOutcome>}
+ * @returns {Promise<{ uploadId: string }>}
  */
 async function startUpload (redirect) {
-  const data = await initiateUpload({ redirect })
-  return StartUploadOutcome.success(data.uploadId, data)
+  const res = await guidanceApi.initiateUpload({ redirect })
+  return res.data
 }
 
 /**
@@ -42,13 +36,10 @@ async function startUpload (redirect) {
  * @returns {Promise<FetchDocumentOutcome>}
  */
 async function fetchDocument (documentId) {
-  try {
-    const data = await getDocument(documentId)
-    return FetchDocumentOutcome.success(data, data)
-  } catch (error) {
-    if (error.statusCode === 404) return FetchDocumentOutcome.notFound()
-    throw error
-  }
+  const res = await guidanceApi.getDocument(documentId)
+  return res.ok
+    ? FetchDocumentOutcome.success(res.data)
+    : FetchDocumentOutcome.notFound()
 }
 
 export {

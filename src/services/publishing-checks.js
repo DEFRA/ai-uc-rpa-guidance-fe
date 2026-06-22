@@ -1,22 +1,19 @@
-import { listDocuments } from '../infra/api/guidance-documents.js'
-import { getLatestAnalysis, startAnalysis } from '../infra/api/publishing-jobs.js'
-import { CheckResultsOutcome } from '../models/check-results-outcome.js'
-import { StartCheckOutcome } from '../models/start-check-outcome.js'
+import * as guidanceApi from '../infra/api/guidance-api.js'
+import {
+  CheckResultsOutcome,
+  StartCheckOutcome
+} from '../models/publishing-checks.js'
 
 /**
  * @param {string} documentId
  * @returns {Promise<CheckResultsOutcome>}
  */
 async function getCheckResults (documentId) {
-  try {
-    const job = await getLatestAnalysis(documentId)
+  const res = await guidanceApi.getLatestAnalysis(documentId)
 
-    return CheckResultsOutcome.success(job.result, job)
-  } catch (error) {
-    if (error.statusCode === 404) return CheckResultsOutcome.notFound()
-
-    throw error
-  }
+  return res.ok
+    ? CheckResultsOutcome.success(res.data.result)
+    : CheckResultsOutcome.notFound()
 }
 
 /**
@@ -29,38 +26,43 @@ async function getCheckResults (documentId) {
  */
 
 /**
- * Lists all guidance documents and their latest publishing check status.
- * 404 from getLatestAnalysis is mapped to status:'not_run' (expected domain state).
- * Per-document unexpected failures degrade to status:'error'.
- * Top-level listDocuments failure surfaces to catch-all.
+ * @private
+ *
+ * Fetches the latest check run status for a single document.
+ * 404 maps to status:'not_run'; unexpected errors surface to catch-all.
+ *
+ * @param {object} doc
+ * @returns {Promise<CheckRun>}
+ */
+async function _fetchCheckRun (doc) {
+  const base = {
+    documentId: doc.id,
+    title: doc.title || doc.filename || 'Untitled'
+  }
+
+  const res = await guidanceApi.getLatestAnalysis(doc.id)
+
+  if (!res.ok) {
+    return { ...base, status: 'not_run', jobId: null, updatedAt: null }
+  }
+
+  return {
+    ...base,
+    status: res.data.status,
+    jobId: res.data.jobId,
+    updatedAt: res.data.updatedAt
+  }
+}
+
+/**
+ * Lists all guidance documents with their latest publishing check status.
  *
  * @returns {Promise<CheckRun[]>}
  */
 async function listCheckRuns () {
-  const result = await listDocuments()
+  const result = await guidanceApi.listDocuments()
 
-  return Promise.all(
-    result.items.map(async (doc) => {
-      const title = doc.title || doc.filename || 'Untitled'
-
-      try {
-        const job = await getLatestAnalysis(doc.id)
-        return {
-          documentId: doc.id,
-          title,
-          status: job.status,
-          jobId: job.jobId,
-          updatedAt: job.updatedAt
-        }
-      } catch (error) {
-        if (error.statusCode === 404) {
-          return { documentId: doc.id, title, status: 'not_run', jobId: null, updatedAt: null }
-        }
-
-        return { documentId: doc.id, title, status: 'error', jobId: null, updatedAt: null }
-      }
-    })
-  )
+  return Promise.all(result.data.items.map(_fetchCheckRun))
 }
 
 /**
@@ -72,21 +74,15 @@ async function listCheckRuns () {
  * @returns {Promise<StartCheckOutcome>}
  */
 async function startCheck (documentId) {
-  try {
-    const job = await startAnalysis(documentId)
+  const res = await guidanceApi.startAnalysis(documentId)
 
-    return StartCheckOutcome.success(job.jobId, job)
-  } catch (error) {
-    if (error.statusCode === 409) return StartCheckOutcome.conflict()
-    if (error.statusCode === 404) return StartCheckOutcome.notFound()
+  if (res.ok) return StartCheckOutcome.success(res.data.jobId)
+  if (res.status === 409) return StartCheckOutcome.conflict()
 
-    throw error
-  }
+  return StartCheckOutcome.notFound()
 }
 
 export {
-  CheckResultsOutcome,
-  StartCheckOutcome,
   getCheckResults,
   listCheckRuns,
   startCheck
