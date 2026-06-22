@@ -3,7 +3,7 @@ import Boom from '@hapi/boom'
 import { statusCodes } from '../../../../constants/status-codes.js'
 import { config } from '../../../../config/config.js'
 
-const cdpUploaderBase = config.get('cdpUploader.url')
+const cdpUploaderBrowserBase = config.get('cdpUploader.browserUrl')
 
 /**
  * Reads uploadId from the query string, constructs the CDP upload URL,
@@ -20,8 +20,8 @@ async function getUploadGuidanceDocumentFile (request, h) {
     return Boom.badRequest('uploadId is required')
   }
 
-  const uploadUrl = cdpUploaderBase
-    ? `${cdpUploaderBase}/upload-and-scan/${uploadId}`
+  const uploadUrl = cdpUploaderBrowserBase
+    ? `${cdpUploaderBrowserBase}/upload-and-scan/${uploadId}`
     : `/upload-and-scan/${uploadId}`
 
   return h.view('guidance-documents/upload/file/page.njk', {

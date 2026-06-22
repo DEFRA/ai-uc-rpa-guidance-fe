@@ -71,19 +71,26 @@ async function createServer () {
     options: loggerOptions
   })
 
-  await server.register([
+  const plugins = [
     requestTracing,
     metrics,
     secureContext,
     pulse,
     sessionCache,
     Scooter,
-    contentSecurityPolicy,
     HapiInert,
     serveStaticFiles,
     viewPlugin,
     router
-  ])
+  ]
+
+  // Disable the content security policy plugin if the CDP Uploader browser URL
+  // is configured for local development (browser posts directly to an external origin)
+  if (!config.get('cdpUploader.browserUrl')) {
+    plugins.push(contentSecurityPolicy)
+  }
+
+  await server.register(plugins)
 
   server.ext('onPreResponse', catchAll)
 
