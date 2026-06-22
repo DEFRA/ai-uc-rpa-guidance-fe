@@ -5,11 +5,11 @@ function anchor (href, label) {
 }
 
 function matchMarkdownLink (text, at) {
-  if (QUOTES.has(text[at - 1])) return null
+  if (QUOTES.has(text[at - 1])) { return null }
   const closeSquare = text.indexOf(']', at + 1)
-  if (closeSquare === -1 || text[closeSquare + 1] !== '(') return null
+  if (closeSquare === -1 || text[closeSquare + 1] !== '(') { return null }
   const closeParen = text.indexOf(')', closeSquare + 2)
-  if (closeParen === -1 || QUOTES.has(text[closeParen + 1])) return null
+  if (closeParen === -1 || QUOTES.has(text[closeParen + 1])) { return null }
   return {
     end: closeParen + 1,
     html: anchor(text.slice(closeSquare + 2, closeParen), text.slice(at + 1, closeSquare))
@@ -17,11 +17,11 @@ function matchMarkdownLink (text, at) {
 }
 
 function matchBareUrl (text, at) {
-  if (text[at - 1] === ']') return null
+  if (text[at - 1] === ']') { return null }
   const urlStart = at + 1
-  if (!text.startsWith('https://', urlStart) && !text.startsWith('http://', urlStart)) return null
+  if (!text.startsWith('https://', urlStart) && !text.startsWith('http://', urlStart)) { return null }
   const closeParen = text.indexOf(')', urlStart)
-  if (closeParen === -1) return null
+  if (closeParen === -1) { return null }
   const url = text.slice(urlStart, closeParen)
   return { end: closeParen + 1, html: anchor(url, url) }
 }
@@ -38,10 +38,10 @@ function matchBareUrl (text, at) {
  * @returns {string}
  */
 function renderLinks (text, pos = 0) {
-  if (typeof text !== 'string') return ''
+  if (typeof text !== 'string') { return '' }
   const bracketPos = text.indexOf('[', pos)
   const parenPos = text.indexOf('(', pos)
-  if (bracketPos === -1 && parenPos === -1) return text.slice(pos)
+  if (bracketPos === -1 && parenPos === -1) { return text.slice(pos) }
 
   const next = Math.min(
     bracketPos === -1 ? text.length : bracketPos,
