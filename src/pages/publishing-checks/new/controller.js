@@ -1,56 +1,11 @@
 import { statusCodes } from '../../../constants/status-codes.js'
-import { listDocuments } from '../../../infra/api/guidance-documents.js'
-import { startAnalysis } from '../../../infra/api/publishing-jobs.js'
+import { getCompleteDocuments } from '../../../services/guidance-documents.js'
+import { startCheck } from '../../../services/publishing-checks.js'
+import { newCheckViewModel } from './view-model.js'
 
-function getErrorMessage (statusCode) {
-  switch (statusCode) {
-    case statusCodes.HTTP_STATUS_CONFLICT:
-      return 'This document has not been fully processed yet. Try again later.'
-    case statusCodes.HTTP_STATUS_NOT_FOUND:
-      return 'The selected document could not be found. Select another.'
-    default:
-      return 'Something went wrong. Please try again.'
-  }
-}
-
-async function fetchDocumentOptions (logger) {
-  try {
-    const result = await listDocuments()
-    return result.items
-      .filter((doc) => doc.status === 'complete')
-      .map((doc) => ({
-        value: doc.id,
-        text: doc.title || doc.filename || doc.id
-      }))
-  } catch (error) {
-    logger.error(error, 'Failed to fetch guidance documents')
-    return []
-  }
-}
-
-async function renderNewCheckPage (request, h, options = {}) {
-  const {
-    errorMessage = null,
-    showSelectError = false
-  } = options
-
-  const documentOptions = await fetchDocumentOptions(request.logger)
-
-  return h.view('publishing-checks/new/page.njk', {
-    pageTitle: 'Start a publishing check',
-    page: 'publishing-checks',
-    selectItems: [
-      { value: '', text: 'Select a document' },
-      ...documentOptions
-    ],
-    hasDocuments: documentOptions.length > 0,
-    errorMessage,
-    showSelectError,
-    breadcrumbs: [
-      { text: 'Home', href: '/' },
-      { text: 'Publishing checks', href: '/publishing-checks' }
-    ]
-  }).code(statusCodes.HTTP_STATUS_OK)
+const START_CHECK_ERROR_MESSAGES = {
+  conflict: 'This document has not been fully processed yet. Try again later.',
+  not_found: 'The selected document could not be found. Select another.'
 }
 
 /**
@@ -58,8 +13,11 @@ async function renderNewCheckPage (request, h, options = {}) {
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
-async function getNewCheck (request, h) {
-  return renderNewCheckPage(request, h)
+async function getNewCheck (_request, h) {
+  const documents = await getCompleteDocuments()
+
+  return h.view('publishing-checks/new/page.njk', newCheckViewModel({ documents }))
+    .code(statusCodes.HTTP_STATUS_OK)
 }
 
 /**
@@ -70,25 +28,20 @@ async function getNewCheck (request, h) {
 async function postNewCheck (request, h) {
   const { documentId } = request.payload
 
-  if (!documentId) {
-    return renderNewCheckPage(request, h, {
-      errorMessage: 'Select a document to analyse',
-      showSelectError: true
-    })
+  const outcome = await startCheck(documentId)
+
+  if (!outcome.succeeded) {
+    const documents = await getCompleteDocuments()
+
+    return h.view('publishing-checks/new/page.njk',
+      newCheckViewModel({
+        documents,
+        errorMessage: START_CHECK_ERROR_MESSAGES[outcome.reason]
+      })
+    ).code(statusCodes.HTTP_STATUS_OK)
   }
 
-  try {
-    const job = await startAnalysis(documentId)
-    return h.redirect(
-      `/publishing-checks/confirmation?jobId=${job.jobId}`
-    )
-  } catch (error) {
-    request.logger.error(error, 'Failed to start analysis')
-
-    const errorMessage = getErrorMessage(error.statusCode)
-
-    return renderNewCheckPage(request, h, { errorMessage })
-  }
+  return h.redirect(`/publishing-checks/confirmation?jobId=${outcome.jobId}`)
 }
 
 export {

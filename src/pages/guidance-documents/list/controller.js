@@ -1,5 +1,6 @@
 import { statusCodes } from '../../../constants/status-codes.js'
-import { listDocuments } from '../../../infra/api/guidance-documents.js'
+import { listGuidanceDocuments } from '../../../services/guidance-documents.js'
+import { listViewModel } from './view-model.js'
 
 /**
  * @param {import('@hapi/hapi').Request} request
@@ -8,31 +9,11 @@ import { listDocuments } from '../../../infra/api/guidance-documents.js'
  */
 async function getGuidanceDocuments (request, h) {
   const page = Number(request.query.page) || 1
-  const pageSize = 10
 
-  let result = { items: [], total: 0, page: 1, pageSize }
+  const result = await listGuidanceDocuments(page, 10)
 
-  try {
-    result = await listDocuments(page, pageSize)
-  } catch (error) {
-    request.logger.error(error, 'Failed to fetch guidance documents')
-  }
-
-  const totalPages = Math.ceil(result.total / result.pageSize)
-
-  return h.view('guidance-documents/list/page.njk', {
-    pageTitle: 'Guidance documents',
-    documents: result.items,
-    pagination: {
-      page: result.page,
-      pageSize: result.pageSize,
-      total: result.total,
-      totalPages
-    },
-    breadcrumbs: [{ text: 'Home', href: '/' }]
-  }).code(statusCodes.HTTP_STATUS_OK)
+  return h.view('guidance-documents/list/page.njk', listViewModel(result))
+    .code(statusCodes.HTTP_STATUS_OK)
 }
 
-export {
-  getGuidanceDocuments
-}
+export { getGuidanceDocuments }

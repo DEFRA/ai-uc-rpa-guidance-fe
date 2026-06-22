@@ -1,5 +1,5 @@
 import { statusCodes } from '../../../constants/status-codes.js'
-import { initiateUpload } from '../../../infra/api/guidance-documents.js'
+import { startUpload } from '../../../services/guidance-documents.js'
 
 /**
  * @param {import('@hapi/hapi').Request} request
@@ -26,15 +26,8 @@ async function getUploadGuidanceDocument (request, h) {
  */
 async function postUploadGuidanceDocument (request, h) {
   const redirect = '/guidance-documents/upload/confirmation'
-
-  const { uploadId } = await initiateUpload({ redirect })
-
-  return h.redirect(
-    `/guidance-documents/upload/file?uploadId=${uploadId}`
-  )
+  const outcome = await startUpload(redirect)
+  return h.redirect(`/guidance-documents/upload/file?uploadId=${outcome.uploadId}`)
 }
 
-export {
-  getUploadGuidanceDocument,
-  postUploadGuidanceDocument
-}
+export { getUploadGuidanceDocument, postUploadGuidanceDocument }

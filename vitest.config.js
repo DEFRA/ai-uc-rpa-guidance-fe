@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     clearMocks: true,
+    setupFiles: ['./vitest.setup.js'],
     coverage: {
       ...configDefaults.coverage,
       reportOnFailure: true,

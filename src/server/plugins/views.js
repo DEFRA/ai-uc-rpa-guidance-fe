@@ -5,7 +5,7 @@ import hapiVision from '@hapi/vision'
 import nunjucks from 'nunjucks'
 
 import { config } from '../../config/config.js'
-import { accordionItems } from '../../filters/accordion-items.js'
+import { renderLinks } from '../../filters/render-links.js'
 
 const nunjucksEnvironment = nunjucks.configure(
   [
@@ -20,7 +20,7 @@ const nunjucksEnvironment = nunjucks.configure(
   }
 )
 
-nunjucksEnvironment.addFilter('accordionItems', accordionItems)
+nunjucksEnvironment.addFilter('renderLinks', renderLinks)
 
 const assetPath = config.get('assetPath')
 const serviceName = config.get('serviceName')
