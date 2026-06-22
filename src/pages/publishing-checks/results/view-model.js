@@ -5,31 +5,31 @@ const SEVERITY_RANK = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
 
 function _worstSeverity (findings) {
   return findings.reduce((worst, f) => {
-    return (SEVERITY_RANK[f.severity] ?? 99) < (SEVERITY_RANK[worst] ?? 99)
-      ? f.severity
-      : worst
-  }, 'info')
+    const curr = SEVERITY_RANK[f.severity] ?? SEVERITY_RANK.info
+
+    return Math.min(curr, worst)
+  }, SEVERITY_RANK.info)
 }
 
 function _buildSeverityCounts (findings) {
-  const counts = {}
-  for (const finding of findings) {
-    counts[finding.severity] = (counts[finding.severity] ?? 0) + 1
-  }
+  const counts = findings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] ?? 0) + 1
+    return acc
+  }, {})
   return SEVERITY_ORDER
     .filter(severity => counts[severity] > 0)
     .map(severity => ({ severity, count: counts[severity] }))
 }
 
 function groupFindingsByCategory (findings) {
-  if (!Array.isArray(findings) || findings.length === 0) return []
+  if (!Array.isArray(findings) || findings.length === 0) { return [] }
 
-  const byCategory = new Map()
-  for (const finding of findings) {
-    const category = finding.category ?? 'Uncategorised'
-    if (!byCategory.has(category)) byCategory.set(category, [])
-    byCategory.get(category).push(finding)
-  }
+  const byCategory = findings.reduce((acc, f) => {
+    const category = f.category ?? 'Uncategorised'
+    if (!acc.has(category)) { acc.set(category, []) }
+    acc.get(category).push(f)
+    return acc
+  }, new Map())
 
   return Array.from(byCategory.entries()).map(([category, categoryFindings]) => ({
     category,

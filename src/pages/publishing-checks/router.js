@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+import { statusCodes } from '../../constants/status-codes.js'
+
 import * as confirmationController from './confirmation/controller.js'
 import * as newCheckController from './new/controller.js'
 import * as resultsController from './results/controller.js'
@@ -26,7 +28,7 @@ const routes = [
     options: {
       validate: {
         payload: Joi.object({ documentId: Joi.string().required() }),
-        failAction: async (request, h) => {
+        failAction: async (_request, h) => {
           const documents = await getCompleteDocuments()
           return h.view('publishing-checks/new/page.njk',
             newCheckViewModel({
@@ -34,7 +36,7 @@ const routes = [
               errorMessage: 'Select a document to analyse',
               showSelectError: true
             }))
-            .code(400)
+            .code(statusCodes.HTTP_STATUS_BAD_REQUEST)
             .takeover()
         }
       }

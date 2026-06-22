@@ -1,4 +1,5 @@
 import * as guidanceApi from '../infra/api/guidance-api.js'
+import { statusCodes } from '../constants/status-codes.js'
 import {
   CheckResultsOutcome,
   StartCheckOutcome
@@ -76,8 +77,12 @@ async function listCheckRuns () {
 async function startCheck (documentId) {
   const res = await guidanceApi.startAnalysis(documentId)
 
-  if (res.ok) return StartCheckOutcome.success(res.data.jobId)
-  if (res.status === 409) return StartCheckOutcome.conflict()
+  if (res.ok) {
+    return StartCheckOutcome.success(res.data.jobId)
+  }
+  if (res.status === statusCodes.HTTP_STATUS_CONFLICT) {
+    return StartCheckOutcome.conflict()
+  }
 
   return StartCheckOutcome.notFound()
 }

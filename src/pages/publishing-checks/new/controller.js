@@ -13,7 +13,7 @@ const START_CHECK_ERROR_MESSAGES = {
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
-async function getNewCheck (request, h) {
+async function getNewCheck (_request, h) {
   const documents = await getCompleteDocuments()
 
   return h.view('publishing-checks/new/page.njk', newCheckViewModel({ documents }))

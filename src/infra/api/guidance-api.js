@@ -1,3 +1,5 @@
+import { constants as http2StatusCodes } from 'node:http2'
+
 import { config } from '../../config/config.js'
 
 const baseUrl = config.get('guidanceApi.url')
@@ -33,7 +35,7 @@ async function listDocuments (page = 1, pageSize = 10) {
 }
 
 async function getDocument (id) {
-  return request(`/guidance/documents/${id}`, { expected: [404] })
+  return request(`/guidance/documents/${id}`, { expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND] })
 }
 
 async function initiateUpload (payload) {
@@ -44,12 +46,12 @@ async function startAnalysis (documentId) {
   return request('/publishing/analyse', {
     method: 'POST',
     body: { documentId },
-    expected: [404, 409]
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND, http2StatusCodes.HTTP_STATUS_CONFLICT]
   })
 }
 
 async function getLatestAnalysis (id) {
-  return request(`/publishing/documents/${id}/analysis`, { expected: [404] })
+  return request(`/publishing/documents/${id}/analysis`, { expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND] })
 }
 
 export {

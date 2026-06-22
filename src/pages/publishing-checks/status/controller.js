@@ -7,7 +7,7 @@ import { statusViewModel } from './view-model.js'
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
-async function getPublishingChecksStatus (request, h) {
+async function getPublishingChecksStatus (_request, h) {
   const runs = await listCheckRuns()
 
   return h.view('publishing-checks/status/page.njk', statusViewModel(runs))

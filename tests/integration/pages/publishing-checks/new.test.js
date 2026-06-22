@@ -104,5 +104,41 @@ describe('#newCheckController', () => {
       expect(payload).toContain('There is a problem')
       expect(payload).toContain('Select a document to analyse')
     })
+
+    test('Should re-render with conflict error when the document is already being processed', async () => {
+      mockListDocuments.mockResolvedValueOnce({ ok: true, data: { items: [] } })
+      mockStartAnalysis.mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        data: null
+      })
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/publishing-checks/start',
+        payload: { documentId: 'doc-1' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(payload).toContain('This document has not been fully processed yet')
+    })
+
+    test('Should re-render with not-found error when the document cannot be found', async () => {
+      mockListDocuments.mockResolvedValueOnce({ ok: true, data: { items: [] } })
+      mockStartAnalysis.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        data: null
+      })
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/publishing-checks/start',
+        payload: { documentId: 'doc-1' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(payload).toContain('The selected document could not be found')
+    })
   })
 })
