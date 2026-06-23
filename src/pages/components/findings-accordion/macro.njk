@@ -17,15 +17,15 @@
   <dl class="app-finding-card__body">
     <div class="app-finding-card__row">
       <dt>Issue</dt>
-      <dd>{{ finding.issue }}</dd>
+      <dd>{{ finding.issue | renderLinks | safe }}</dd>
     </div>
     <div class="app-finding-card__row">
       <dt>Why it matters</dt>
-      <dd>{{ finding.why_it_matters }}</dd>
+      <dd>{{ finding.why_it_matters | renderLinks | safe }}</dd>
     </div>
     <div class="app-finding-card__row">
       <dt>Recommendation</dt>
-      <dd>{{ finding.recommendation }}</dd>
+      <dd>{{ finding.recommendation | renderLinks | safe }}</dd>
     </div>
   </dl>
 </div>
