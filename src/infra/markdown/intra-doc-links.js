@@ -16,7 +16,8 @@ const SECTION_NUMBER = /^#?(\d+(?:\.\d+)*)$/
  * @param {{ documentId: string, sections: { number: string }[] }} options
  * @returns {{ walkTokens: (token: object) => void }}
  */
-function rewriteIntraDocLinks ({ documentId, sections = [] }) {
+function rewriteIntraDocLinks (options) {
+  const { documentId, sections = [] } = options
   const known = new Set(sections.map((section) => section.number))
 
   return {

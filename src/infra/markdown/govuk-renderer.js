@@ -17,18 +17,18 @@ const HEADING_CLASSES = {
 function govukRenderer () {
   return {
     renderer: {
-      heading ({ tokens, depth }) {
-        const className = HEADING_CLASSES[depth] || 'govuk-heading-s'
-        return `<h${depth} class="${className}">${this.parser.parseInline(tokens)}</h${depth}>\n`
+      heading (token) {
+        const className = HEADING_CLASSES[token.depth] || 'govuk-heading-s'
+        return `<h${token.depth} class="${className}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`
       },
 
-      paragraph ({ tokens }) {
-        return `<p class="govuk-body">${this.parser.parseInline(tokens)}</p>\n`
+      paragraph (token) {
+        return `<p class="govuk-body">${this.parser.parseInline(token.tokens)}</p>\n`
       },
 
-      link ({ href, title, tokens }) {
-        const titleAttr = title ? ` title="${title}"` : ''
-        return `<a class="govuk-link" href="${href}"${titleAttr}>${this.parser.parseInline(tokens)}</a>`
+      link (token) {
+        const titleAttr = token.title ? ` title="${token.title}"` : ''
+        return `<a class="govuk-link" href="${token.href}"${titleAttr}>${this.parser.parseInline(token.tokens)}</a>`
       },
 
       list (token) {

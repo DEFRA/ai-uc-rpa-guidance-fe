@@ -49,7 +49,8 @@ function buildTocTree (sections, documentId, currentNumber) {
  * @param {{ documentId: string, manifest: object }} params
  * @returns {object}
  */
-function landingViewModel ({ documentId, manifest }) {
+function landingViewModel (params) {
+  const { documentId, manifest } = params
   const sections = manifest.sections ?? []
   const topLevelCount = sections.filter(
     (section) => section.parent === null || section.parent === undefined
@@ -75,7 +76,8 @@ function landingViewModel ({ documentId, manifest }) {
  * @param {{ documentId: string, manifest: object, markdown: string, sectionNumber: string }} params
  * @returns {object}
  */
-function sectionViewModel ({ documentId, manifest, markdown, sectionNumber }) {
+function sectionViewModel (params) {
+  const { documentId, manifest, markdown, sectionNumber } = params
   const sections = manifest.sections ?? []
   const index = sections.findIndex((section) => section.number === sectionNumber)
   const current = index >= 0 ? sections[index] : null

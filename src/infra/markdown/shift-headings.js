@@ -10,14 +10,18 @@
  * @param {{ by: number }} options Positive `by` promotes headings (smaller depth).
  * @returns {{ walkTokens: (token: object) => void }}
  */
-function shiftHeadings ({ by = 0 } = {}) {
+const MIN_HEADING_DEPTH = 1
+const MAX_HEADING_DEPTH = 6
+
+function shiftHeadings (options = {}) {
+  const { by = 0 } = options
   return {
     walkTokens (token) {
       if (token.type !== 'heading' || !by) {
         return
       }
 
-      token.depth = Math.min(6, Math.max(1, token.depth - by))
+      token.depth = Math.min(MAX_HEADING_DEPTH, Math.max(MIN_HEADING_DEPTH, token.depth - by))
     }
   }
 }
