@@ -42,9 +42,34 @@ async function fetchDocument (documentId) {
     : FetchDocumentOutcome.notFound()
 }
 
+/**
+ * Fetch the section graph manifest for a parsed document.
+ *
+ * @param {string} documentId
+ * @returns {Promise<object|null>} The manifest, or null if not found.
+ */
+async function getDocumentManifest (documentId) {
+  const res = await guidanceApi.getDocumentManifest(documentId)
+  return res.ok ? res.data : null
+}
+
+/**
+ * Fetch the rendered Markdown for a single document section.
+ *
+ * @param {string} documentId
+ * @param {string} sectionNumber
+ * @returns {Promise<string|null>} The section Markdown, or null if not found.
+ */
+async function getDocumentSection (documentId, sectionNumber) {
+  const res = await guidanceApi.getDocumentSection(documentId, sectionNumber)
+  return res.ok ? res.data : null
+}
+
 export {
   listGuidanceDocuments,
   getCompleteDocuments,
   startUpload,
-  fetchDocument
+  fetchDocument,
+  getDocumentManifest,
+  getDocumentSection
 }

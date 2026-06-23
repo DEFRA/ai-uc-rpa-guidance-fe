@@ -1,5 +1,6 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest'
 import createFetchMock from 'vitest-fetch-mock'
+import * as guidanceApi from '../../../../src/infra/api/guidance-api.js'
 
 const fetchMock = createFetchMock(vi)
 
@@ -8,19 +9,9 @@ vi.mock('../../../../src/config/config.js', () => ({
 }))
 
 describe('#guidanceApi', () => {
-  let listDocuments, getDocument, initiateUpload, startAnalysis, getLatestAnalysis
-
-  beforeEach(async () => {
+  beforeEach(() => {
     fetchMock.enableMocks()
     fetchMock.resetMocks()
-    vi.resetModules()
-
-    const module = await import('../../../../src/infra/api/guidance-api.js')
-    listDocuments = module.listDocuments
-    getDocument = module.getDocument
-    initiateUpload = module.initiateUpload
-    startAnalysis = module.startAnalysis
-    getLatestAnalysis = module.getLatestAnalysis
   })
 
   describe('#listDocuments', () => {
@@ -28,7 +19,7 @@ describe('#guidanceApi', () => {
       const data = { items: [], total: 0, page: 2, pageSize: 20 }
       fetchMock.mockResponseOnce(JSON.stringify(data), { status: 200 })
 
-      const res = await listDocuments(2, 20)
+      const res = await guidanceApi.listDocuments(2, 20)
 
       expect(res.ok).toBe(true)
       expect(res.data).toEqual(data)
@@ -43,7 +34,7 @@ describe('#guidanceApi', () => {
         JSON.stringify({ items: [], total: 0, page: 1, pageSize: 10 })
       )
 
-      await listDocuments()
+      await guidanceApi.listDocuments()
 
       expect(fetchMock).toHaveBeenCalledWith(
         'http://guidance-api.test/guidance/documents?page=1&page_size=10',
@@ -57,7 +48,7 @@ describe('#guidanceApi', () => {
         statusText: 'Service Unavailable'
       })
 
-      await expect(listDocuments()).rejects.toThrow(
+      await expect(guidanceApi.listDocuments()).rejects.toThrow(
         'Guidance API GET /guidance/documents?page=1&page_size=10' +
         ' failed: 503 Service Unavailable'
       )
@@ -69,7 +60,7 @@ describe('#guidanceApi', () => {
       const doc = { id: 'doc-1', title: 'Test', status: 'complete' }
       fetchMock.mockResponseOnce(JSON.stringify(doc))
 
-      const res = await getDocument('doc-1')
+      const res = await guidanceApi.getDocument('doc-1')
 
       expect(res.ok).toBe(true)
       expect(res.data).toEqual(doc)
@@ -82,7 +73,7 @@ describe('#guidanceApi', () => {
     test('Should return { ok: false } on 404 without throwing', async () => {
       fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
 
-      const res = await getDocument('missing')
+      const res = await guidanceApi.getDocument('missing')
 
       expect(res.ok).toBe(false)
       expect(res.status).toBe(404)
@@ -94,9 +85,60 @@ describe('#guidanceApi', () => {
         statusText: 'Service Unavailable'
       })
 
-      await expect(getDocument('doc-1')).rejects.toMatchObject({
+      await expect(guidanceApi.getDocument('doc-1')).rejects.toMatchObject({
         statusCode: 503
       })
+    })
+  })
+
+  describe('#getDocumentManifest', () => {
+    test('Should GET /guidance/documents/:id/manifest and return envelope', async () => {
+      const manifest = { documentId: 'doc-1', title: 'T', sections: [] }
+      fetchMock.mockResponseOnce(JSON.stringify(manifest))
+
+      const res = await guidanceApi.getDocumentManifest('doc-1')
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toEqual(manifest)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/manifest',
+        expect.objectContaining({})
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getDocumentManifest('missing')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('#getDocumentSection', () => {
+    test('Should GET the section as text/markdown', async () => {
+      fetchMock.mockResponseOnce('## 1 Intro\n\nContent.', {
+        headers: { 'Content-Type': 'text/markdown' }
+      })
+
+      const res = await guidanceApi.getDocumentSection('doc-1', '1.2')
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toBe('## 1 Intro\n\nContent.')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/sections/1.2',
+        expect.objectContaining({})
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getDocumentSection('doc-1', '99')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
     })
   })
 
@@ -107,7 +149,7 @@ describe('#guidanceApi', () => {
         { status: 200 }
       )
 
-      const res = await initiateUpload({
+      const res = await guidanceApi.initiateUpload({
         redirect: 'http://localhost/callback'
       })
 
@@ -128,7 +170,7 @@ describe('#guidanceApi', () => {
         statusText: 'Bad Gateway'
       })
 
-      await expect(initiateUpload({ redirect: '/x' })).rejects.toMatchObject({
+      await expect(guidanceApi.initiateUpload({ redirect: '/x' })).rejects.toMatchObject({
         statusCode: 502
       })
     })
@@ -139,7 +181,7 @@ describe('#guidanceApi', () => {
       const job = { jobId: 'job-123', status: 'pending' }
       fetchMock.mockResponseOnce(JSON.stringify(job), { status: 202 })
 
-      const res = await startAnalysis('doc-456')
+      const res = await guidanceApi.startAnalysis('doc-456')
 
       expect(res.ok).toBe(true)
       expect(res.data).toEqual(job)
@@ -155,7 +197,7 @@ describe('#guidanceApi', () => {
     test('Should return { ok: false } on 409 without throwing', async () => {
       fetchMock.mockResponseOnce('', { status: 409, statusText: 'Conflict' })
 
-      const res = await startAnalysis('doc-1')
+      const res = await guidanceApi.startAnalysis('doc-1')
 
       expect(res.ok).toBe(false)
       expect(res.status).toBe(409)
@@ -164,7 +206,7 @@ describe('#guidanceApi', () => {
     test('Should return { ok: false } on 404 without throwing', async () => {
       fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
 
-      const res = await startAnalysis('missing')
+      const res = await guidanceApi.startAnalysis('missing')
 
       expect(res.ok).toBe(false)
       expect(res.status).toBe(404)
@@ -176,7 +218,7 @@ describe('#guidanceApi', () => {
         statusText: 'Internal Server Error'
       })
 
-      await expect(startAnalysis('doc-1')).rejects.toMatchObject({
+      await expect(guidanceApi.startAnalysis('doc-1')).rejects.toMatchObject({
         statusCode: 500
       })
     })
@@ -187,7 +229,7 @@ describe('#guidanceApi', () => {
       const job = { jobId: 'job-123', status: 'completed' }
       fetchMock.mockResponseOnce(JSON.stringify(job))
 
-      const res = await getLatestAnalysis('doc-456')
+      const res = await guidanceApi.getLatestAnalysis('doc-456')
 
       expect(res.ok).toBe(true)
       expect(res.data).toEqual(job)
@@ -201,7 +243,7 @@ describe('#guidanceApi', () => {
     test('Should return { ok: false } on 404 without throwing', async () => {
       fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
 
-      const res = await getLatestAnalysis('doc-none')
+      const res = await guidanceApi.getLatestAnalysis('doc-none')
 
       expect(res.ok).toBe(false)
       expect(res.status).toBe(404)
@@ -213,7 +255,7 @@ describe('#guidanceApi', () => {
         statusText: 'Service Unavailable'
       })
 
-      await expect(getLatestAnalysis('doc-1')).rejects.toMatchObject({
+      await expect(guidanceApi.getLatestAnalysis('doc-1')).rejects.toMatchObject({
         statusCode: 503
       })
     })

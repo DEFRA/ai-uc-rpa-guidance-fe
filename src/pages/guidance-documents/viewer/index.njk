@@ -1,0 +1,39 @@
+{% extends "common/layout.njk" %}
+{% import "components/toc-nav/macro.njk" as tocNav %}
+
+{% set page = 'guidance-documents' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+          <h1 class="govuk-heading-xl">{{ documentTitle }}</h1>
+
+          <p class="govuk-body-l">
+            This guidance is published as {{ sectionCount }} section{{ 's' if sectionCount != 1 }},
+            organised into {{ topLevelCount }} part{{ 's' if topLevelCount != 1 }}.
+          </p>
+          <p class="govuk-body">
+            Use the contents below to jump to a section, or start from the
+            beginning and work through each section in turn.
+          </p>
+
+          {% if startHref %}
+            <a href="{{ startHref }}" role="button" draggable="false" class="govuk-button govuk-button--start">
+              Start now
+              <svg class="govuk-button__start-icon" xmlns="http://www.w3.org/2000/svg" width="17.5" height="19" viewBox="0 0 33 40" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"></path>
+              </svg>
+            </a>
+          {% endif %}
+
+          <h2 class="govuk-heading-l">Contents</h2>
+          <nav class="app-doc-contents" aria-label="Contents">
+            {{ tocNav.tocList(toc) }}
+          </nav>
+        </div>
+      </div>
+    </main>
+  </div>
+{% endblock %}

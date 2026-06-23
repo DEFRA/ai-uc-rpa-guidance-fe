@@ -4,7 +4,7 @@ import { config } from '../../config/config.js'
 
 const baseUrl = config.get('guidanceApi.url')
 
-async function request (path, { method = 'GET', body, expected = [] } = {}) {
+async function request (path, { method = 'GET', body, expected = [], responseType = 'json' } = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
@@ -12,7 +12,10 @@ async function request (path, { method = 'GET', body, expected = [] } = {}) {
   })
 
   if (response.ok) {
-    return { ok: true, status: response.status, data: await response.json() }
+    const data = responseType === 'text'
+      ? await response.text()
+      : await response.json()
+    return { ok: true, status: response.status, data }
   }
 
   if (expected.includes(response.status)) {
@@ -38,6 +41,22 @@ async function getDocument (id) {
   return request(`/guidance/documents/${id}`, { expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND] })
 }
 
+async function getDocumentManifest (id) {
+  return request(`/guidance/documents/${id}/manifest`, {
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
+async function getDocumentSection (id, sectionNumber) {
+  return request(
+    `/guidance/documents/${id}/sections/${encodeURIComponent(sectionNumber)}`,
+    {
+      responseType: 'text',
+      expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+    }
+  )
+}
+
 async function initiateUpload (payload) {
   return request('/guidance/documents', { method: 'POST', body: payload })
 }
@@ -57,6 +76,8 @@ async function getLatestAnalysis (id) {
 export {
   listDocuments,
   getDocument,
+  getDocumentManifest,
+  getDocumentSection,
   initiateUpload,
   startAnalysis,
   getLatestAnalysis

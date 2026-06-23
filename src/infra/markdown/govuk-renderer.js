@@ -1,0 +1,71 @@
+const HEADING_CLASSES = {
+  1: 'govuk-heading-xl',
+  2: 'govuk-heading-l',
+  3: 'govuk-heading-m',
+  4: 'govuk-heading-s'
+}
+
+/**
+ * A `marked` extension whose renderer applies GOV.UK Frontend classes to the
+ * generated HTML, so rendered guidance content matches the rest of the service.
+ *
+ * Uses marked's token-object renderer signatures (marked v5+). The pipeline
+ * applies this before any `walkTokens` transforms registered later.
+ *
+ * @returns {{ renderer: object }}
+ */
+function govukRenderer () {
+  return {
+    renderer: {
+      heading ({ tokens, depth }) {
+        const className = HEADING_CLASSES[depth] || 'govuk-heading-s'
+        return `<h${depth} class="${className}">${this.parser.parseInline(tokens)}</h${depth}>\n`
+      },
+
+      paragraph ({ tokens }) {
+        return `<p class="govuk-body">${this.parser.parseInline(tokens)}</p>\n`
+      },
+
+      link ({ href, title, tokens }) {
+        const titleAttr = title ? ` title="${title}"` : ''
+        return `<a class="govuk-link" href="${href}"${titleAttr}>${this.parser.parseInline(tokens)}</a>`
+      },
+
+      list (token) {
+        const tag = token.ordered ? 'ol' : 'ul'
+        const modifier = token.ordered ? 'govuk-list--number' : 'govuk-list--bullet'
+        const items = token.items.map((item) => this.listitem(item)).join('')
+        return `<${tag} class="govuk-list ${modifier}">${items}</${tag}>\n`
+      },
+
+      listitem (item) {
+        return `<li>${this.parser.parse(item.tokens, !!item.loose)}</li>`
+      },
+
+      table (token) {
+        const cell = (c, tag, className, scope) =>
+          `<${tag} class="${className}"${scope}>${this.parser.parseInline(c.tokens)}</${tag}>`
+
+        const head = token.header
+          .map((c) => cell(c, 'th', 'govuk-table__header', ' scope="col"'))
+          .join('')
+        const body = token.rows
+          .map((row) => {
+            const cells = row
+              .map((c) => cell(c, 'td', 'govuk-table__cell', ''))
+              .join('')
+            return `<tr class="govuk-table__row">${cells}</tr>`
+          })
+          .join('')
+        return (
+          '<table class="govuk-table">' +
+          `<thead class="govuk-table__head"><tr class="govuk-table__row">${head}</tr></thead>` +
+          `<tbody class="govuk-table__body">${body}</tbody>` +
+          '</table>\n'
+        )
+      }
+    }
+  }
+}
+
+export { govukRenderer }

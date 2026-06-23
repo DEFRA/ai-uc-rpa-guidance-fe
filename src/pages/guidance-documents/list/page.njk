@@ -21,7 +21,13 @@
             {% for doc in documents %}
               <tr class="govuk-table__row">
                 <td class="govuk-table__cell">
-                  {{ doc.title or doc.filename or 'Untitled' }}
+                  {% if doc.status == 'complete' and doc.id %}
+                    <a class="govuk-link app-guidance-doc-link" href="/guidance-documents/{{ doc.id }}/view">
+                      {{ doc.title or doc.filename or 'Untitled' }}
+                    </a>
+                  {% else %}
+                    {{ doc.title or doc.filename or 'Untitled' }}
+                  {% endif %}
                 </td>
                 <td class="govuk-table__cell">
                   {% if doc.status == 'complete' %}

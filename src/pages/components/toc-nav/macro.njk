@@ -1,0 +1,20 @@
+{% macro tocList(items) %}
+  {% import "components/toc-nav/macro.njk" as toc %}
+  <ul class="app-toc__list">
+    {% for item in items %}
+      <li class="app-toc__item{% if item.isOpen %} app-toc__item--open{% endif %}">
+        <a
+          class="govuk-link app-toc__link{% if item.isCurrent %} app-toc__link--current{% endif %}"
+          href="{{ item.href }}"
+          {% if item.isCurrent %}aria-current="page"{% endif %}
+        >
+          <span class="app-toc__number">{{ item.number }}</span>
+          <span class="app-toc__heading">{{ item.heading }}</span>
+        </a>
+        {% if item.children | length %}
+          {{ toc.tocList(item.children) }}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endmacro %}
