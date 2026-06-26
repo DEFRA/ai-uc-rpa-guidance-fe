@@ -142,6 +142,31 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#getDocumentImage', () => {
+    test('Should GET image bytes as a Buffer', async () => {
+      const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47])
+      fetchMock.mockResponseOnce(imageBytes)
+
+      const res = await guidanceApi.getDocumentImage('doc-1', 'img_1.png')
+
+      expect(res.ok).toBe(true)
+      expect(Buffer.isBuffer(res.data)).toBe(true)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/images/img_1.png',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getDocumentImage('doc-1', 'missing.png')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+  })
+
   describe('#initiateUpload', () => {
     test('Should POST to /guidance/documents with payload', async () => {
       fetchMock.mockResponseOnce(

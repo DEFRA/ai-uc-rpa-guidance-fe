@@ -1,6 +1,7 @@
 import { createMarkdown } from '../../../infra/markdown/markdown.js'
 import { govukRenderer } from '../../../infra/markdown/govuk-renderer.js'
 import { rewriteIntraDocLinks } from '../../../infra/markdown/intra-doc-links.js'
+import { rewriteImagePaths } from '../../../infra/markdown/rewrite-image-paths.js'
 import { shiftHeadings } from '../../../infra/markdown/shift-headings.js'
 import { guidanceDocumentsBreadcrumbs } from '../../common/breadcrumbs.js'
 
@@ -95,6 +96,7 @@ function sectionViewModel (params) {
     .use(govukRenderer())
     .use(shiftHeadings({ by: headingShift }))
     .use(rewriteIntraDocLinks({ documentId, sections }))
+    .use(rewriteImagePaths({ documentId }))
     .render(markdown)
 
   const toLink = (section) =>

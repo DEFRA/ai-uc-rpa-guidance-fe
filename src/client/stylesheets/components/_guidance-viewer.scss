@@ -74,6 +74,14 @@
   @include govuk-link-style-no-visited-state;
 }
 
+// Images embedded in rendered Markdown guidance content.
+.guidance-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: govuk-spacing(4) 0;
+}
+
 // Rendered Markdown content area.
 .app-guidance-content {
   margin-bottom: govuk-spacing(6);

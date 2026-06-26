@@ -3,8 +3,20 @@ import Boom from '@hapi/boom'
 import { statusCodes } from '../../../constants/status-codes.js'
 import {
   getDocumentManifest,
-  getDocumentSection
+  getDocumentSection,
+  getDocumentImage
 } from '../../../services/guidance-documents.js'
+
+const IMAGE_CONTENT_TYPES = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  tiff: 'image/tiff',
+  tif: 'image/tiff'
+}
 import { landingViewModel, sectionViewModel } from './view-model.js'
 
 /**
@@ -58,4 +70,26 @@ async function getGuidanceViewerSection (request, h) {
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
-export { getGuidanceViewerIndex, getGuidanceViewerSection }
+/**
+ * Proxy an image from the backend API to the browser.
+ *
+ * @param {import('@hapi/hapi').Request} request
+ * @param {import('@hapi/hapi').ResponseToolkit} h
+ * @returns {Promise<import('@hapi/hapi').ResponseObject>}
+ */
+async function getGuidanceDocumentImage (request, h) {
+  const { documentId, filename } = request.params
+
+  const buffer = await getDocumentImage(documentId, filename)
+
+  if (!buffer) {
+    throw Boom.notFound('Image not found')
+  }
+
+  const ext = filename.split('.').pop().toLowerCase()
+  const contentType = IMAGE_CONTENT_TYPES[ext] ?? 'application/octet-stream'
+
+  return h.response(buffer).type(contentType)
+}
+
+export { getGuidanceViewerIndex, getGuidanceViewerSection, getGuidanceDocumentImage }

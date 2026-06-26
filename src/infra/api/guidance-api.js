@@ -14,7 +14,9 @@ async function request (path, { method = 'GET', body, expected = [], responseTyp
   if (response.ok) {
     const data = responseType === 'text'
       ? await response.text()
-      : await response.json()
+      : responseType === 'arrayBuffer'
+        ? Buffer.from(await response.arrayBuffer())
+        : await response.json()
     return { ok: true, status: response.status, data }
   }
 
@@ -57,6 +59,16 @@ async function getDocumentSection (id, sectionNumber) {
   )
 }
 
+async function getDocumentImage (documentId, filename) {
+  return request(
+    `/guidance/documents/${documentId}/images/${encodeURIComponent(filename)}`,
+    {
+      responseType: 'arrayBuffer',
+      expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+    }
+  )
+}
+
 async function initiateUpload (payload) {
   return request('/guidance/documents', { method: 'POST', body: payload })
 }
@@ -78,6 +90,7 @@ export {
   getDocument,
   getDocumentManifest,
   getDocumentSection,
+  getDocumentImage,
   initiateUpload,
   startAnalysis,
   getLatestAnalysis

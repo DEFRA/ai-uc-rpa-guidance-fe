@@ -65,11 +65,24 @@ async function getDocumentSection (documentId, sectionNumber) {
   return res.ok ? res.data : null
 }
 
+/**
+ * Fetch the raw bytes for an image extracted from a guidance document.
+ *
+ * @param {string} documentId
+ * @param {string} filename
+ * @returns {Promise<Buffer|null>} Image bytes, or null if not found.
+ */
+async function getDocumentImage (documentId, filename) {
+  const res = await guidanceApi.getDocumentImage(documentId, filename)
+  return res.ok ? res.data : null
+}
+
 export {
   listGuidanceDocuments,
   getCompleteDocuments,
   startUpload,
   fetchDocument,
   getDocumentManifest,
-  getDocumentSection
+  getDocumentSection,
+  getDocumentImage
 }

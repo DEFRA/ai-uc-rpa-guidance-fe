@@ -10,6 +10,22 @@ import * as viewerController from './viewer/controller.js'
 const routes = [
   {
     method: 'GET',
+    path: '/guidance-documents/{documentId}/assets/{filename}',
+    handler: viewerController.getGuidanceDocumentImage,
+    options: {
+      validate: {
+        params: Joi.object({
+          documentId: Joi.string().uuid().required(),
+          filename: Joi.string().pattern(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/).required()
+        }),
+        failAction: (_request, _h, err) => {
+          throw Boom.notFound('Image not found', err)
+        }
+      }
+    }
+  },
+  {
+    method: 'GET',
     path: '/guidance-documents',
     handler: listController.getGuidanceDocuments
   },
