@@ -4,6 +4,12 @@ import { config } from '../../config/config.js'
 
 const baseUrl = config.get('guidanceApi.url')
 
+const responseParsers = {
+  json: (res) => res.json(),
+  text: (res) => res.text(),
+  arrayBuffer: async (res) => Buffer.from(await res.arrayBuffer())
+}
+
 async function request (path, { method = 'GET', body, expected = [], responseType = 'json' } = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method,
@@ -12,9 +18,8 @@ async function request (path, { method = 'GET', body, expected = [], responseTyp
   })
 
   if (response.ok) {
-    const data = responseType === 'text'
-      ? await response.text()
-      : await response.json()
+    const parser = responseParsers[responseType]
+    const data = await parser(response)
     return { ok: true, status: response.status, data }
   }
 
@@ -57,6 +62,16 @@ async function getDocumentSection (id, sectionNumber) {
   )
 }
 
+async function getDocumentImage (documentId, filename) {
+  return request(
+    `/guidance/documents/${documentId}/images/${encodeURIComponent(filename)}`,
+    {
+      responseType: 'arrayBuffer',
+      expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+    }
+  )
+}
+
 async function initiateUpload (payload) {
   return request('/guidance/documents', { method: 'POST', body: payload })
 }
@@ -78,6 +93,7 @@ export {
   getDocument,
   getDocumentManifest,
   getDocumentSection,
+  getDocumentImage,
   initiateUpload,
   startAnalysis,
   getLatestAnalysis

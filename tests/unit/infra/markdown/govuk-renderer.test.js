@@ -32,6 +32,16 @@ describe('#govukRenderer', () => {
     )
   })
 
+  test('renders images with guidance-image class', () => {
+    expect(render('![diagram](img.png)')).toContain(
+      '<img class="guidance-image" src="img.png" alt="diagram"'
+    )
+  })
+
+  test('renders images with empty alt when no alt text supplied', () => {
+    expect(render('![](img.png)')).toContain('alt=""')
+  })
+
   test('renders tables with govuk-table markup', () => {
     const html = render('| A | B |\n|---|---|\n| 1 | 2 |')
     expect(html).toContain('<table class="govuk-table">')

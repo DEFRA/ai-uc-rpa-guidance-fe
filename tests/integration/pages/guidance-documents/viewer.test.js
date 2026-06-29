@@ -132,4 +132,51 @@ describe('#guidanceViewerController', () => {
 
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
   })
+
+  describe('#getGuidanceDocumentImage', () => {
+    const VALID_DOC_ID = '12345678-1234-5678-1234-567812345678'
+
+    test('Should proxy image bytes with correct content type', async () => {
+      const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47])
+      guidanceDocumentsService.getDocumentImage.mockResolvedValueOnce(imageBytes)
+
+      const { statusCode, rawPayload, headers } = await server.inject({
+        method: 'GET',
+        url: `/guidance-documents/${VALID_DOC_ID}/assets/img_1.png`
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(headers['content-type']).toContain('image/png')
+      expect(rawPayload).toEqual(imageBytes)
+    })
+
+    test('Should return 404 when image is not found', async () => {
+      guidanceDocumentsService.getDocumentImage.mockResolvedValueOnce(null)
+
+      const { statusCode } = await server.inject({
+        method: 'GET',
+        url: `/guidance-documents/${VALID_DOC_ID}/assets/img_1.png`
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should return 404 for a non-UUID document ID', async () => {
+      const { statusCode } = await server.inject({
+        method: 'GET',
+        url: '/guidance-documents/not-a-uuid/assets/img_1.png'
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should return 404 for a filename starting with a dash', async () => {
+      const { statusCode } = await server.inject({
+        method: 'GET',
+        url: `/guidance-documents/${VALID_DOC_ID}/assets/-secret.png`
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+  })
 })

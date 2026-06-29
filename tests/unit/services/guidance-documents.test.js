@@ -141,4 +141,19 @@ describe('guidance-documents service', () => {
       expect(await guidanceService.getDocumentSection('doc-1', '99')).toBeNull()
     })
   })
+
+  describe('#getDocumentImage', () => {
+    test('Should return buffer when image is found', async () => {
+      const buffer = Buffer.from([0x89, 0x50])
+      guidanceApi.getDocumentImage.mockResolvedValueOnce({ ok: true, data: buffer })
+
+      expect(await guidanceService.getDocumentImage('doc-1', 'img_1.png')).toBe(buffer)
+    })
+
+    test('Should return null when image is not found', async () => {
+      guidanceApi.getDocumentImage.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      expect(await guidanceService.getDocumentImage('doc-1', 'img_1.png')).toBeNull()
+    })
+  })
 })

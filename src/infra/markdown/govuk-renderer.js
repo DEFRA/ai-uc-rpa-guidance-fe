@@ -42,6 +42,11 @@ function govukRenderer () {
         return `<li>${this.parser.parse(item.tokens, !!item.loose)}</li>`
       },
 
+      image (token) {
+        const alt = token.text ?? ''
+        return `<img class="guidance-image" src="${token.href}" alt="${alt}" />\n`
+      },
+
       table (token) {
         const cell = (c, tag, className, scope) =>
           `<${tag} class="${className}"${scope}>${this.parser.parseInline(c.tokens)}</${tag}>`
