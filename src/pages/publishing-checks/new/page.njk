@@ -22,8 +22,6 @@
 
       {% if hasDocuments %}
         <form method="post" action="/publishing-checks/start">
-          <input type="hidden" name="_csrf" value="{{ csrf }}">
-
           {{ govukSelect({
             id: "documentId",
             name: "documentId",
