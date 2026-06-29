@@ -4,6 +4,12 @@ import { config } from '../../config/config.js'
 
 const baseUrl = config.get('guidanceApi.url')
 
+const responseParsers = {
+  json: (res) => res.json(),
+  text: (res) => res.text(),
+  arrayBuffer: async (res) => Buffer.from(await res.arrayBuffer())
+}
+
 async function request (path, { method = 'GET', body, expected = [], responseType = 'json' } = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method,
@@ -12,11 +18,8 @@ async function request (path, { method = 'GET', body, expected = [], responseTyp
   })
 
   if (response.ok) {
-    const data = responseType === 'text'
-      ? await response.text()
-      : responseType === 'arrayBuffer'
-        ? Buffer.from(await response.arrayBuffer())
-        : await response.json()
+    const parser = responseParsers[responseType]
+    const data = await parser(response)
     return { ok: true, status: response.status, data }
   }
 
