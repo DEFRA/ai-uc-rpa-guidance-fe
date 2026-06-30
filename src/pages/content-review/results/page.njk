@@ -1,0 +1,95 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/accordion/macro.njk" import govukAccordion %}
+{% from "components/content-review-finding/macro.njk" import critiqueFindingCard %}
+{% from "components/severity/macro.njk" import severityTag %}
+
+{% set page = 'content-review' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      {# ── Notification banner — overall outcome ───────────────────────── #}
+      {% if not hasFindings %}
+        {{ govukNotificationBanner({
+          type: "success",
+          titleText: "No issues found",
+          html: "<p class=\"govuk-body\">This document conforms to the GDS content standards and the DEFRA style guide.</p>"
+        }) }}
+      {% else %}
+        {{ govukNotificationBanner({
+          titleText: "Review complete",
+          html: "<p class=\"govuk-body\">" + totalFindings + (" issue" if totalFindings == 1 else " issues") + " identified across the standards reviewed.</p>"
+        }) }}
+      {% endif %}
+
+      {# ── Page heading ────────────────────────────────────────────────── #}
+      <span class="govuk-caption-m" style="color: #505a5f">Guidance content review</span>
+      <h1 class="govuk-heading-l">{{ documentTitle }}</h1>
+
+      {# ── Structural drift warnings ───────────────────────────────────── #}
+      {% if invariantWarnings | length %}
+        <div class="govuk-warning-text">
+          <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+          <strong class="govuk-warning-text__text">
+            <span class="govuk-visually-hidden">Warning</span>
+            {% for warning in invariantWarnings %}{{ warning }}{% if not loop.last %}; {% endif %}{% endfor %}
+          </strong>
+        </div>
+      {% endif %}
+
+      {# ── Issue overview ──────────────────────────────────────────────── #}
+      {% if severityCounts | length %}
+        <h2 class="govuk-heading-m">Issue overview</h2>
+        <div class="app-issue-overview">
+          {% for item in severityCounts %}
+            <div class="app-issue-overview__box">
+              {{ severityTag(item.severity) }}
+              <span class="app-issue-overview__count">{{ item.count }}</span>
+              <span class="app-issue-overview__label">{{ "issue" if item.count == 1 else "issues" }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ── Per-standard reports ────────────────────────────────────────── #}
+      {% for report in reports %}
+        <h2 class="govuk-heading-m">{{ report.label }}</h2>
+
+        {% if report.conformanceSummary %}
+          <p class="govuk-body">{{ report.conformanceSummary }}</p>
+        {% endif %}
+
+        {% if report.count %}
+          {% set accordionItems = [] %}
+          {% set headingHtml %}
+            <span class="app-accordion-heading__category">Findings</span>
+            {{ severityTag(report.worst, 'app-accordion-heading__tag') }}
+            <span class="app-accordion-heading__count govuk-body-s">{{ report.count }} {{ "issue" if report.count == 1 else "issues" }}</span>
+          {% endset %}
+          {% set contentHtml %}
+            {% for finding in report.findings %}{{ critiqueFindingCard(finding) }}{% endfor %}
+          {% endset %}
+          {% if accordionItems.push({ heading: { html: headingHtml }, content: { html: contentHtml } }) %}{% endif %}
+          {{ govukAccordion({ id: "findings-accordion-" + report.standard, items: accordionItems }) }}
+        {% else %}
+          <p class="govuk-body">No issues were identified against this standard.</p>
+        {% endif %}
+      {% endfor %}
+
+      {# ── Token usage ─────────────────────────────────────────────────── #}
+      {% if usage %}
+        <p class="govuk-body-s" style="color: #505a5f; margin-top: 40px">
+          Token usage — input: {{ usage.input_tokens }} · output: {{ usage.output_tokens }}
+        </p>
+      {% endif %}
+
+      <p class="govuk-body govuk-!-margin-top-6">
+        <a class="govuk-link" href="/content-review">Start another content review</a>
+      </p>
+
+    </main>
+  </div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+
+{% set pageTitle = 'Start a content review' %}
+{% set page = 'content-review' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      {% if errorMessage %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [{ text: errorMessage }]
+        }) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-xl">Start a content review</h1>
+
+      <p class="govuk-body">
+        Review a guidance document against GDS content standards and the
+        DEFRA style guide. The review runs immediately and may take up to a
+        minute to complete.
+      </p>
+
+      {% if hasDocuments %}
+        <form method="post" action="/content-review/start">
+          <input type="hidden" name="_csrf" value="{{ csrf }}">
+
+          {{ govukSelect({
+            id: "documentId",
+            name: "documentId",
+            label: {
+              text: "Select a document",
+              classes: "govuk-label--m"
+            },
+            items: selectItems,
+            errorMessage: showSelectError and { text: errorMessage }
+          }) }}
+
+          {{ govukButton({
+            text: "Start content review"
+          }) }}
+        </form>
+      {% else %}
+        <p class="govuk-body">
+          No parsed documents are available for review. Upload and
+          process a guidance document before running a content review.
+        </p>
+        <a class="govuk-link" href="/guidance-documents/upload">
+          Upload a guidance document
+        </a>
+      {% endif %}
+
+    </main>
+  </div>
+{% endblock %}

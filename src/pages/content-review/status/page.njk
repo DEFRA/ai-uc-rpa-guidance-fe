@@ -1,0 +1,97 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Content review' %}
+{% set page = 'content-review' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <h1 class="govuk-heading-xl">Content review</h1>
+
+      <p class="govuk-body">
+        Review guidance documents against GDS content standards and the DEFRA
+        style guide. Start a review, then return here to check its status and
+        view the findings.
+      </p>
+
+      {% if runs | length %}
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header">Document</th>
+              <th scope="col" class="govuk-table__header">Status</th>
+              <th scope="col" class="govuk-table__header">Last updated</th>
+              <th scope="col" class="govuk-table__header">Action</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for run in runs %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">{{ run.title }}</td>
+                <td class="govuk-table__cell">
+                  {% if run.status == 'completed' %}
+                    <strong class="govuk-tag govuk-tag--green">
+                      Completed
+                    </strong>
+                  {% elif run.status == 'running' %}
+                    <strong class="govuk-tag govuk-tag--yellow">
+                      Running
+                    </strong>
+                  {% elif run.status == 'pending' %}
+                    <strong class="govuk-tag govuk-tag--blue">
+                      Pending
+                    </strong>
+                  {% elif run.status == 'error' %}
+                    <strong class="govuk-tag govuk-tag--red">Error</strong>
+                  {% else %}
+                    <strong class="govuk-tag govuk-tag--grey">Not run</strong>
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if run.updatedAt %}
+                    {{ run.updatedAt | truncate(10, true, '') }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  {% if run.status == 'completed' %}
+                    <a
+                      class="govuk-button govuk-button--secondary"
+                      role="button"
+                      draggable="false"
+                      href="/content-review/{{ run.documentId }}/results"
+                    >View</a>
+                  {% else %}
+                    <button
+                      class="govuk-button govuk-button--secondary"
+                      disabled
+                      aria-disabled="true"
+                    >View</button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <p class="govuk-body">
+          <a class="govuk-link" href="/content-review">Refresh status</a>
+        </p>
+      {% else %}
+        <p class="govuk-body">
+          No guidance documents have been uploaded yet.
+        </p>
+      {% endif %}
+
+      <a
+        href="/content-review/start"
+        role="button"
+        draggable="false"
+        class="govuk-button"
+      >
+        Start a content review
+      </a>
+    </main>
+  </div>
+{% endblock %}

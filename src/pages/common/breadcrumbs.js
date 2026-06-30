@@ -10,4 +10,9 @@ const publishingChecksBreadcrumbs = () => [
   { text: 'Publishing checks', href: '/publishing-checks' }
 ]
 
-export { homeCrumb, guidanceDocumentsBreadcrumbs, publishingChecksBreadcrumbs }
+const contentReviewBreadcrumbs = () => [
+  homeCrumb,
+  { text: 'Content review', href: '/content-review' }
+]
+
+export { homeCrumb, guidanceDocumentsBreadcrumbs, publishingChecksBreadcrumbs, contentReviewBreadcrumbs }
