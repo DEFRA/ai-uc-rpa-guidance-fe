@@ -96,10 +96,6 @@ async function startReview (documentId) {
   })
 }
 
-async function getReviewJob (jobId) {
-  return request(`/critique/jobs/${jobId}`, { expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND] })
-}
-
 async function getLatestReview (documentId) {
   return request(`/critique/documents/${documentId}/analysis`, {
     expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
@@ -116,6 +112,5 @@ export {
   startAnalysis,
   getLatestAnalysis,
   startReview,
-  getReviewJob,
   getLatestReview
 }

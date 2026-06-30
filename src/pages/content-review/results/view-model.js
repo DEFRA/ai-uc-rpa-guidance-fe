@@ -8,10 +8,12 @@ const STANDARD_LABELS = {
   defra_style: 'DEFRA style guide'
 }
 
+const REVIEW_COMPLETE_LABEL = 'Review complete'
+
 const STATUS_LABELS = {
   approved: 'No issues found',
-  review_completed: 'Review complete',
-  max_iterations_reached: 'Review complete'
+  review_completed: REVIEW_COMPLETE_LABEL,
+  max_iterations_reached: REVIEW_COMPLETE_LABEL
 }
 
 function _worstSeverity (findings) {
@@ -59,7 +61,7 @@ function resultsViewModel (result) {
     pageTitle: result.documentTitle,
     page: 'content-review',
     documentTitle: result.documentTitle,
-    statusLabel: STATUS_LABELS[result.status] ?? 'Review complete',
+    statusLabel: STATUS_LABELS[result.status] ?? REVIEW_COMPLETE_LABEL,
     hasFindings: allFindings.length > 0,
     totalFindings: allFindings.length,
     severityCounts: _buildSeverityCounts(allFindings),

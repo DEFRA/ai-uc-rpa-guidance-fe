@@ -285,4 +285,89 @@ describe('#guidanceApi', () => {
       })
     })
   })
+
+  describe('#startReview', () => {
+    test('Should POST /critique/jobs with the documentId', async () => {
+      const job = { jobId: 'job-cr-1', status: 'pending' }
+      fetchMock.mockResponseOnce(JSON.stringify(job), { status: 202 })
+
+      const res = await guidanceApi.startReview('doc-456')
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toEqual(job)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/critique/jobs',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ documentId: 'doc-456' })
+        })
+      )
+    })
+
+    test('Should return { ok: false } on 409 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 409, statusText: 'Conflict' })
+
+      const res = await guidanceApi.startReview('doc-1')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(409)
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.startReview('missing')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+
+    test('Should throw on unexpected non-OK response', async () => {
+      fetchMock.mockResponseOnce('', {
+        status: 500,
+        statusText: 'Internal Server Error'
+      })
+
+      await expect(guidanceApi.startReview('doc-1')).rejects.toMatchObject({
+        statusCode: 500
+      })
+    })
+  })
+
+  describe('#getLatestReview', () => {
+    test('Should GET /critique/documents/:id/analysis', async () => {
+      const job = { jobId: 'job-cr-2', status: 'completed' }
+      fetchMock.mockResponseOnce(JSON.stringify(job))
+
+      const res = await guidanceApi.getLatestReview('doc-456')
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toEqual(job)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test' +
+        '/critique/documents/doc-456/analysis',
+        expect.objectContaining({})
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getLatestReview('doc-none')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+
+    test('Should throw on unexpected non-OK response', async () => {
+      fetchMock.mockResponseOnce('', {
+        status: 503,
+        statusText: 'Service Unavailable'
+      })
+
+      await expect(guidanceApi.getLatestReview('doc-1')).rejects.toMatchObject({
+        statusCode: 503
+      })
+    })
+  })
 })
