@@ -1,0 +1,35 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Content review started' %}
+{% set page = 'content-review' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <div class="govuk-panel govuk-panel--confirmation">
+        <h1 class="govuk-panel__title">Content review started</h1>
+        {% if jobId %}
+          <div class="govuk-panel__body">
+            Your job reference<br>
+            <strong>{{ jobId }}</strong>
+          </div>
+        {% endif %}
+      </div>
+
+      <h2 class="govuk-heading-m">What happens next</h2>
+      <p class="govuk-body">
+        The document is being reviewed against GDS content standards and the
+        DEFRA style guide. This may take a minute or two. Check the content
+        review page for the current status and to view the findings.
+      </p>
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/content-review">
+          View content reviews
+        </a>
+      </p>
+
+    </main>
+  </div>
+{% endblock %}

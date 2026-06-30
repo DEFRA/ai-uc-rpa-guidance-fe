@@ -88,6 +88,20 @@ async function getLatestAnalysis (id) {
   return request(`/publishing/documents/${id}/analysis`, { expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND] })
 }
 
+async function startReview (documentId) {
+  return request('/critique/jobs', {
+    method: 'POST',
+    body: { documentId },
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND, http2StatusCodes.HTTP_STATUS_CONFLICT]
+  })
+}
+
+async function getLatestReview (documentId) {
+  return request(`/critique/documents/${documentId}/analysis`, {
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
 export {
   listDocuments,
   getDocument,
@@ -96,5 +110,7 @@ export {
   getDocumentImage,
   initiateUpload,
   startAnalysis,
-  getLatestAnalysis
+  getLatestAnalysis,
+  startReview,
+  getLatestReview
 }

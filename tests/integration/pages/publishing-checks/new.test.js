@@ -79,10 +79,12 @@ describe('#newCheckController', () => {
         data: { jobId: 'job-999', status: 'pending' }
       })
 
+      // Include the hidden _csrf field the browser form posts, to guard
+      // against strict validation rejecting the unknown key.
       const { statusCode, headers } = await server.inject({
         method: 'POST',
         url: '/publishing-checks/start',
-        payload: { documentId: 'doc-1' }
+        payload: { documentId: 'doc-1', _csrf: '' }
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)

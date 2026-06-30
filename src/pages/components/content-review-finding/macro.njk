@@ -1,0 +1,43 @@
+{% from "components/severity/macro.njk" import severityTag %}
+
+{% macro critiqueFindingCard(finding) %}
+  {% set _borderColour = {
+    critical: '#d4351c',
+    high:     '#f47738',
+    medium:   '#f2a73d',
+    low:      '#1d70b8'
+  }[finding.severity] or '#b1b4b6' %}
+
+<div class="app-finding-card" style="border-left-color: {{ _borderColour }}">
+  <div class="app-finding-card__header">
+    {{ severityTag(finding.severity) }}
+    <span class="app-finding-card__section">{{ finding.where }}</span>
+  </div>
+  <dl class="app-finding-card__body">
+    <div class="app-finding-card__row">
+      <dt>Issue</dt>
+      <dd>{{ finding.what }}</dd>
+    </div>
+    {% if finding.quote %}
+      <div class="app-finding-card__row">
+        <dt>In the document</dt>
+        <dd><blockquote class="govuk-inset-text govuk-!-margin-0">{{ finding.quote }}</blockquote></dd>
+      </div>
+    {% endif %}
+    <div class="app-finding-card__row">
+      <dt>Why it matters</dt>
+      <dd>{{ finding.why }}</dd>
+    </div>
+    <div class="app-finding-card__row">
+      <dt>Recommendation</dt>
+      <dd>{{ finding.fix }}</dd>
+    </div>
+    {% if finding.rule_reference %}
+      <div class="app-finding-card__row">
+        <dt>Reference</dt>
+        <dd class="govuk-body-s">{{ finding.rule_reference }}</dd>
+      </div>
+    {% endif %}
+  </dl>
+</div>
+{% endmacro %}

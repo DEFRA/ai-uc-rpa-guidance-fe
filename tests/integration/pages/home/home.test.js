@@ -34,15 +34,16 @@ describe('#homepageController', () => {
     expect(payload).toContain('Guidance documents')
   })
 
-  test('Should show coming soon placeholders for upcoming PoCs', async () => {
+  test('Should link to the AI agent tools', async () => {
     const { payload } = await server.inject({
       method: 'GET',
       url: '/'
     })
 
-    expect(payload).toContain('Coming soon')
     expect(payload).toContain('Guidance pre-publishing checks')
+    expect(payload).toContain('/publishing-checks')
     expect(payload).toContain('Guidance content review')
+    expect(payload).toContain('/content-review')
   })
 
   test('Should not contain a link to /getting-started', async () => {

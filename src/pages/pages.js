@@ -1,6 +1,7 @@
 import { homeRouter } from './home/router.js'
 import { guidanceDocumentsRouter } from './guidance-documents/router.js'
 import { publishingChecksRouter } from './publishing-checks/router.js'
+import { contentReviewRouter } from './content-review/router.js'
 
 const pageRouter = {
   plugin: {
@@ -9,7 +10,8 @@ const pageRouter = {
       await server.register([
         homeRouter,
         guidanceDocumentsRouter,
-        publishingChecksRouter
+        publishingChecksRouter,
+        contentReviewRouter
       ])
     }
   }

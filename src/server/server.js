@@ -35,7 +35,10 @@ async function createServer () {
     routes: {
       validate: {
         options: {
-          abortEarly: false
+          abortEarly: false,
+          // Forms include a hidden `_csrf` field (template convention); strip
+          // unvalidated keys so they don't fail strict object validation.
+          stripUnknown: true
         }
       },
       files: {
