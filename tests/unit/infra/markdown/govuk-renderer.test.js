@@ -17,9 +17,21 @@ describe('#govukRenderer', () => {
     expect(render('Some text.')).toContain('<p class="govuk-body">Some text.</p>')
   })
 
-  test('applies govuk-link to links', () => {
+  test('applies govuk-link to internal anchor links, with no target attribute', () => {
+    expect(render('[see above](#_Toc123456)')).toContain(
+      '<a class="govuk-link" href="#_Toc123456">see above</a>'
+    )
+  })
+
+  test('opens external links in a new tab with an accessible hint', () => {
     expect(render('[GOV.UK](https://gov.uk)')).toContain(
-      '<a class="govuk-link" href="https://gov.uk">GOV.UK</a>'
+      '<a class="govuk-link" href="https://gov.uk" target="_blank" rel="noopener noreferrer">GOV.UK<span class="govuk-visually-hidden"> (opens in new tab)</span></a>'
+    )
+  })
+
+  test('does not open site-relative links in a new tab', () => {
+    expect(render('[see section](/guidance-documents/doc-1/sections/1)')).toContain(
+      '<a class="govuk-link" href="/guidance-documents/doc-1/sections/1">see section</a>'
     )
   })
 
