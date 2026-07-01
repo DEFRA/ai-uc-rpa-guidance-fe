@@ -5,6 +5,11 @@ const HEADING_CLASSES = {
   4: 'govuk-heading-s'
 }
 
+// Matches an absolute URI with a scheme (e.g. `https:`, `mailto:`) or a
+// protocol-relative URL (`//host`). Deliberately does not match `#anchor`
+// fragments or `/relative` paths, so internal links are left untouched.
+const EXTERNAL_HREF = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i
+
 /**
  * A `marked` extension whose renderer applies GOV.UK Frontend classes to the
  * generated HTML, so rendered guidance content matches the rest of the service.
@@ -28,7 +33,12 @@ function govukRenderer () {
 
       link (token) {
         const titleAttr = token.title ? ` title="${token.title}"` : ''
-        return `<a class="govuk-link" href="${token.href}"${titleAttr}>${this.parser.parseInline(token.tokens)}</a>`
+        const isExternal = EXTERNAL_HREF.test(token.href ?? '')
+        const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+        const externalHint = isExternal
+          ? '<span class="govuk-visually-hidden"> (opens in new tab)</span>'
+          : ''
+        return `<a class="govuk-link" href="${token.href}"${titleAttr}${externalAttrs}>${this.parser.parseInline(token.tokens)}${externalHint}</a>`
       },
 
       list (token) {
