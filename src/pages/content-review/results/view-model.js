@@ -40,9 +40,10 @@ function _buildSeverityCounts (findings) {
 
 /**
  * @param {object} result - The critique response, plus documentTitle.
+ * @param {string} [documentId]
  * @returns {object}
  */
-function resultsViewModel (result) {
+function resultsViewModel (result, documentId) {
   const reports = (result.reports ?? []).map(report => {
     const findings = report.findings ?? []
     return {
@@ -68,6 +69,9 @@ function resultsViewModel (result) {
     reports,
     invariantWarnings: result.invariant_warnings ?? [],
     usage: result.usage ?? null,
+    resultsV2Href: documentId
+      ? `/content-review/${documentId}/results/v2`
+      : null,
     breadcrumbs: [
       ...contentReviewBreadcrumbs(),
       { text: result.documentTitle, href: '#' }

@@ -1,0 +1,34 @@
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{# Renders the full detail of a single normalised finding as a tidy summary
+   list, with any verbatim quote shown as an inset block below. Used by both
+   the publishing-checks and content-review per-finding detail pages.
+
+   finding = {
+     title, location, severityTag: { text, classes },
+     sections: [ { heading, body, isQuote? } ]
+   }
+#}
+{% macro findingDetail(finding) %}
+  <h1 class="govuk-heading-l">{{ finding.title | renderLinks | safe }}</h1>
+
+  {% set rows = [{ key: { text: "Severity" }, value: { html: govukTag(finding.severityTag) } }] %}
+  {% if finding.location %}
+    {% if rows.push({ key: { text: "Location" }, value: { text: finding.location } }) %}{% endif %}
+  {% endif %}
+  {% for section in finding.sections %}
+    {% if not section.isQuote %}
+      {% if rows.push({ key: { text: section.heading }, value: { html: section.body | renderLinks } }) %}{% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {{ govukSummaryList({ rows: rows }) }}
+
+  {% for section in finding.sections %}
+    {% if section.isQuote and section.body %}
+      <h2 class="govuk-heading-s">{{ section.heading }}</h2>
+      <blockquote class="govuk-inset-text">{{ section.body }}</blockquote>
+    {% endif %}
+  {% endfor %}
+{% endmacro %}

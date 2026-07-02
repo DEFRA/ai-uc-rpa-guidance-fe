@@ -41,15 +41,19 @@ function groupFindingsByCategory (findings) {
 
 /**
  * @param {object} result
+ * @param {string} [documentId]
  * @returns {object}
  */
-function resultsViewModel (result) {
+function resultsViewModel (result, documentId) {
   return {
     pageTitle: result.document_title,
     page: 'publishing-checks',
     result,
     severityCounts: _buildSeverityCounts(result.findings ?? []),
     findingGroups: groupFindingsByCategory(result.findings ?? []),
+    resultsV2Href: documentId
+      ? `/publishing-checks/${documentId}/results/v2`
+      : null,
     breadcrumbs: [
       ...publishingChecksBreadcrumbs(),
       { text: result.document_title, href: '#' }
