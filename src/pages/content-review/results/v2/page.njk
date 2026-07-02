@@ -1,9 +1,8 @@
 {% extends "common/layout.njk" %}
 
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
-{% from "govuk/components/accordion/macro.njk" import govukAccordion %}
-{% from "components/content-review-finding/macro.njk" import critiqueFindingCard %}
-{% from "components/severity/macro.njk" import severityTag %}
+{% from "govuk/components/task-list/macro.njk" import govukTaskList %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 
 {% set page = 'content-review' %}
 
@@ -29,11 +28,9 @@
       <span class="govuk-caption-m" style="color: #505a5f">Guidance content review</span>
       <h1 class="govuk-heading-l">{{ documentTitle }}</h1>
 
-      {% if resultsV2Href %}
-        <p class="govuk-body-s">
-          <a class="govuk-link" href="{{ resultsV2Href }}">Preview the new layout</a>
-        </p>
-      {% endif %}
+      <p class="govuk-body-s">
+        <a class="govuk-link" href="{{ originalResultsHref }}">View the original layout</a>
+      </p>
 
       {# ── Structural drift warnings ───────────────────────────────────── #}
       {% if invariantWarnings | length %}
@@ -46,44 +43,46 @@
         </div>
       {% endif %}
 
-      {# ── Issue overview ──────────────────────────────────────────────── #}
-      {% if severityCounts | length %}
-        <h2 class="govuk-heading-m">Issue overview</h2>
-        <div class="app-issue-overview">
-          {% for item in severityCounts %}
-            <div class="app-issue-overview__box">
-              {{ severityTag(item.severity) }}
-              <span class="app-issue-overview__count">{{ item.count }}</span>
-              <span class="app-issue-overview__label">{{ "issue" if item.count == 1 else "issues" }}</span>
-            </div>
-          {% endfor %}
+      {# ── Issue overview summary card ─────────────────────────────────── #}
+      {% if severityRows | length %}
+        <div class="govuk-grid-row">
+          <div class="govuk-grid-column-one-third">
+            {{ govukSummaryList({ card: { title: { text: "Issue overview" } }, rows: severityRows }) }}
+          </div>
         </div>
       {% endif %}
 
-      {# ── Per-standard reports ────────────────────────────────────────── #}
-      {% for report in reports %}
-        <h2 class="govuk-heading-m">{{ report.label }}</h2>
+      {# ── Findings — grouped task lists, each links to a detail page ───── #}
+      <h2 class="govuk-heading-m">Findings ({{ totalFindings }})</h2>
 
-        {% if report.conformanceSummary %}
-          <p class="govuk-body">{{ report.conformanceSummary }}</p>
-        {% endif %}
+      {% if importantItems | length %}
+        <h3 class="govuk-heading-s">Important to fix</h3>
+        {{ govukTaskList({ idPrefix: "important", items: importantItems }) }}
+      {% endif %}
 
-        {% if report.count %}
-          {% set accordionItems = [] %}
-          {% set headingHtml %}
-            <span class="app-accordion-heading__category">Findings</span>
-            {{ severityTag(report.worst, 'app-accordion-heading__tag') }}
-            <span class="app-accordion-heading__count govuk-body-s">{{ report.count }} {{ "issue" if report.count == 1 else "issues" }}</span>
-          {% endset %}
-          {% set contentHtml %}
-            {% for finding in report.findings %}{{ critiqueFindingCard(finding) }}{% endfor %}
-          {% endset %}
-          {% if accordionItems.push({ heading: { html: headingHtml }, content: { html: contentHtml } }) %}{% endif %}
-          {{ govukAccordion({ id: "findings-accordion-" + report.standard, items: accordionItems }) }}
-        {% else %}
-          <p class="govuk-body">No issues were identified against this standard.</p>
-        {% endif %}
-      {% endfor %}
+      {% if suggestionItems | length %}
+        <h3 class="govuk-heading-s govuk-!-margin-top-6">Suggestions</h3>
+        {{ govukTaskList({ idPrefix: "suggestions", items: suggestionItems }) }}
+      {% endif %}
+
+      {% if not totalFindings %}
+        <p class="govuk-body">No findings were identified.</p>
+      {% endif %}
+
+      {# ── What was checked (secondary, collapsed) ─────────────────────── #}
+      {% if conformanceSummaries | length %}
+        <details class="govuk-details govuk-!-margin-top-6">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">What was checked</span>
+          </summary>
+          <div class="govuk-details__text">
+            {% for report in conformanceSummaries %}
+              <h3 class="govuk-heading-s">{{ report.label }}</h3>
+              <p class="govuk-body">{{ report.summary }}</p>
+            {% endfor %}
+          </div>
+        </details>
+      {% endif %}
 
       {# ── Token usage ─────────────────────────────────────────────────── #}
       {% if usage %}

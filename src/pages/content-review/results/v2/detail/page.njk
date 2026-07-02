@@ -1,0 +1,23 @@
+{% extends "common/layout.njk" %}
+
+{% from "components/finding-detail/macro.njk" import findingDetail %}
+
+{% set page = 'content-review' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+
+          {{ findingDetail(finding) }}
+
+          <p class="govuk-body govuk-!-margin-top-6">
+            <a class="govuk-link" href="{{ backHref }}">Back to all findings</a>
+          </p>
+
+        </div>
+      </div>
+    </main>
+  </div>
+{% endblock %}

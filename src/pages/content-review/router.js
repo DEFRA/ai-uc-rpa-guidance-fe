@@ -4,6 +4,8 @@ import { statusCodes } from '../../constants/status-codes.js'
 
 import * as confirmationController from './confirmation/controller.js'
 import * as resultsController from './results/controller.js'
+import * as resultsV2Controller from './results/v2/controller.js'
+import * as findingV2Controller from './results/v2/detail/controller.js'
 import * as startController from './start/controller.js'
 import * as statusController from './status/controller.js'
 
@@ -51,6 +53,24 @@ const routes = [
     method: 'GET',
     path: '/content-review/{documentId}/results',
     handler: resultsController.getContentReviewResults
+  },
+  {
+    method: 'GET',
+    path: '/content-review/{documentId}/results/v2',
+    handler: resultsV2Controller.getContentReviewResultsV2
+  },
+  {
+    method: 'GET',
+    path: '/content-review/{documentId}/results/v2/{index}',
+    handler: findingV2Controller.getContentReviewFinding,
+    options: {
+      validate: {
+        params: Joi.object({
+          documentId: Joi.string().required(),
+          index: Joi.number().integer().min(0).required()
+        })
+      }
+    }
   }
 ]
 

@@ -5,6 +5,8 @@ import { statusCodes } from '../../constants/status-codes.js'
 import * as confirmationController from './confirmation/controller.js'
 import * as newCheckController from './new/controller.js'
 import * as resultsController from './results/controller.js'
+import * as resultsV2Controller from './results/v2/controller.js'
+import * as findingV2Controller from './results/v2/detail/controller.js'
 import * as statusController from './status/controller.js'
 
 import { getCompleteDocuments } from '../../services/guidance-documents.js'
@@ -51,6 +53,24 @@ const routes = [
     method: 'GET',
     path: '/publishing-checks/{documentId}/results',
     handler: resultsController.getPublishingCheckResults
+  },
+  {
+    method: 'GET',
+    path: '/publishing-checks/{documentId}/results/v2',
+    handler: resultsV2Controller.getPublishingCheckResultsV2
+  },
+  {
+    method: 'GET',
+    path: '/publishing-checks/{documentId}/results/v2/{index}',
+    handler: findingV2Controller.getPublishingCheckFinding,
+    options: {
+      validate: {
+        params: Joi.object({
+          documentId: Joi.string().required(),
+          index: Joi.number().integer().min(0).required()
+        })
+      }
+    }
   }
 ]
 

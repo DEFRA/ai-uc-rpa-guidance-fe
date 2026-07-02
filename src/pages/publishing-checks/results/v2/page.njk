@@ -1,0 +1,90 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/task-list/macro.njk" import govukTaskList %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% set page = 'publishing-checks' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      {# ── Notification banner — verdict with a short status line ──────── #}
+      {% if verdict == 'ready' %}
+        {{ govukNotificationBanner({
+          type: "success",
+          titleText: "Ready to publish",
+          text: "This document meets the publishing standards."
+        }) }}
+      {% else %}
+        {{ govukNotificationBanner({
+          type: "important",
+          titleText: "Not ready to publish",
+          text: "Resolve the findings below before publishing.",
+          attributes: { role: "alert" }
+        }) }}
+      {% endif %}
+
+      {# ── Page heading ────────────────────────────────────────────────── #}
+      <span class="govuk-caption-m" style="color: #505a5f">Publishing quality check</span>
+      <h1 class="govuk-heading-l">{{ documentTitle }}</h1>
+
+      <p class="govuk-body-s">
+        <a class="govuk-link" href="{{ originalResultsHref }}">View the original layout</a>
+      </p>
+
+      {% if summary %}
+        <p class="govuk-body">{{ summary }}</p>
+      {% endif %}
+
+      {# ── Issue overview summary card ─────────────────────────────────── #}
+      {% if severityRows | length %}
+        <div class="govuk-grid-row">
+          <div class="govuk-grid-column-one-third">
+            {{ govukSummaryList({ card: { title: { text: "Issue overview" } }, rows: severityRows }) }}
+          </div>
+        </div>
+      {% endif %}
+
+      {# ── Findings — grouped task lists, each links to a detail page ───── #}
+      <h2 class="govuk-heading-m">Findings ({{ totalFindings }})</h2>
+
+      {% if importantItems | length %}
+        <h3 class="govuk-heading-s">Important to fix</h3>
+        {{ govukTaskList({ idPrefix: "important", items: importantItems }) }}
+      {% endif %}
+
+      {% if suggestionItems | length %}
+        <h3 class="govuk-heading-s govuk-!-margin-top-6">Suggestions</h3>
+        {{ govukTaskList({ idPrefix: "suggestions", items: suggestionItems }) }}
+      {% endif %}
+
+      {% if not totalFindings %}
+        <p class="govuk-body">No findings were identified.</p>
+      {% endif %}
+
+      {# ── What the document does well (secondary, collapsed) ───────────── #}
+      {% if goodPoints | length %}
+        <details class="govuk-details govuk-!-margin-top-6">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">What the document does well</span>
+          </summary>
+          <div class="govuk-details__text">
+            <ul class="govuk-list govuk-list--bullet">
+              {% for point in goodPoints %}<li>{{ point }}</li>{% endfor %}
+            </ul>
+          </div>
+        </details>
+      {% endif %}
+
+      {# ── Token usage ─────────────────────────────────────────────────── #}
+      {% if usage %}
+        <p class="govuk-body-s" style="color: #505a5f; margin-top: 40px">
+          Token usage — input: {{ usage.input_tokens }} · output: {{ usage.output_tokens }}
+        </p>
+      {% endif %}
+
+    </main>
+  </div>
+{% endblock %}
