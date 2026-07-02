@@ -135,5 +135,16 @@ describe('#contentReviewResultsController', () => {
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
     })
+
+    test('Should 404 when no review exists for the document', async () => {
+      mockGetLatestReview.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      const { statusCode } = await server.inject({
+        method: 'GET',
+        url: '/content-review/doc-1/results/v2/0'
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
   })
 })

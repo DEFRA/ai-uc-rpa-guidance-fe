@@ -19,19 +19,25 @@ function severityTag (severity) {
   return SEVERITY_TAGS[severity] ?? SEVERITY_TAGS.info
 }
 
+const MAX_TITLE_LENGTH = 80
+// Only cut on a word boundary if it leaves a reasonable amount of text;
+// otherwise a very early space would truncate the title too aggressively.
+const MIN_WORD_BOUNDARY = 40
+
 /**
  * Shorten a finding title for use as a task-list link, cutting on a word
  * boundary. The full text remains on the finding's detail page.
  *
  * @param {string} text
- * @param {number} [max=80]
+ * @param {number} [max=MAX_TITLE_LENGTH]
  * @returns {string}
  */
-function truncateTitle (text, max = 80) {
+function truncateTitle (text, max = MAX_TITLE_LENGTH) {
   if (!text || text.length <= max) { return text }
   const slice = text.slice(0, max)
   const lastSpace = slice.lastIndexOf(' ')
-  return `${(lastSpace > 40 ? slice.slice(0, lastSpace) : slice).trimEnd()}…`
+  const cut = lastSpace > MIN_WORD_BOUNDARY ? slice.slice(0, lastSpace) : slice
+  return `${cut.trimEnd()}…`
 }
 
 /**

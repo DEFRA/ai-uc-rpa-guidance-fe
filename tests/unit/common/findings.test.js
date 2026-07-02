@@ -59,4 +59,37 @@ describe('#buildSeverityGroups', () => {
     expect(suggestions).toHaveLength(1)
     expect(suggestions[0].status.tag.classes).toBe('govuk-tag--grey')
   })
+
+  test('Should leave a short title untruncated in the task-list item', () => {
+    const short = [{ id: 0, title: 'A short title', location: 'S', severity: 'high' }]
+    const { important } = buildSeverityGroups(short, hrefFor)
+
+    expect(important[0].title.text).toBe('A short title')
+  })
+
+  test('Should truncate a long title on a word boundary with an ellipsis', () => {
+    const longTitle =
+      'This is a reasonably long finding title that should exceed the eighty character truncation limit'
+    const item = [{ id: 0, title: longTitle, location: 'S', severity: 'high' }]
+
+    const { important } = buildSeverityGroups(item, hrefFor)
+    const text = important[0].title.text
+
+    expect(text.endsWith('…')).toBe(true)
+    expect(text.length).toBeLessThan(longTitle.length)
+    expect(text).not.toContain(' …') // trimmed before the ellipsis
+    expect(longTitle).toContain(text.slice(0, -1)) // it's a genuine prefix
+  })
+
+  test('Should hard-cut a long title with no early word boundary', () => {
+    const longTitle = 'ab ' + 'x'.repeat(120) // only space is within first 40 chars
+    const item = [{ id: 0, title: longTitle, location: 'S', severity: 'high' }]
+
+    const { important } = buildSeverityGroups(item, hrefFor)
+    const text = important[0].title.text
+
+    expect(text.endsWith('…')).toBe(true)
+    // hard cut at 80 chars + ellipsis (no early space to cut on)
+    expect(text.length).toBe(81)
+  })
 })
