@@ -54,9 +54,10 @@ function normaliseFindings (result) {
 /**
  * @param {object} result - The critique response, plus documentTitle.
  * @param {string} documentId
+ * @param {string} jobId
  * @returns {object}
  */
-function resultsViewModel (result, documentId) {
+function resultsViewModel (result, documentId, jobId) {
   const findings = normaliseFindings(result)
   const groups = buildSeverityGroups(
     findings,
@@ -72,6 +73,7 @@ function resultsViewModel (result, documentId) {
     pageTitle: result.documentTitle,
     page: 'content-review',
     documentTitle: result.documentTitle,
+    jobId,
     statusLabel: STATUS_LABELS[result.status] ?? REVIEW_COMPLETE_LABEL,
     hasFindings: findings.length > 0,
     totalFindings: findings.length,

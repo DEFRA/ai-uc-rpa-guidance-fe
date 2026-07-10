@@ -25,9 +25,10 @@ function normaliseFindings (result) {
 /**
  * @param {object} result
  * @param {string} documentId
+ * @param {string} jobId
  * @returns {object}
  */
-function resultsViewModel (result, documentId) {
+function resultsViewModel (result, documentId, jobId) {
   const findings = normaliseFindings(result)
   const groups = buildSeverityGroups(
     findings,
@@ -38,6 +39,7 @@ function resultsViewModel (result, documentId) {
     pageTitle: result.document_title,
     page: 'publishing-checks',
     documentTitle: result.document_title,
+    jobId,
     verdict: result.verdict,
     summary: result.summary,
     goodPoints: result.good_points ?? [],

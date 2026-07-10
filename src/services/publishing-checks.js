@@ -13,7 +13,7 @@ async function getCheckResults (documentId) {
   const res = await guidanceApi.getLatestAnalysis(documentId)
 
   return res.ok
-    ? CheckResultsOutcome.success(res.data.result)
+    ? CheckResultsOutcome.success(res.data.jobId, res.data.result)
     : CheckResultsOutcome.notFound()
 }
 

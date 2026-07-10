@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { statusCodes } from '../../constants/status-codes.js'
+import { feedbackPayloadSchema } from '../../schemas/feedback.js'
 
 import * as confirmationController from './confirmation/controller.js'
 import * as resultsController from './results/controller.js'
@@ -69,6 +70,21 @@ const routes = [
           documentId: Joi.string().required(),
           index: Joi.number().integer().min(0).required()
         })
+      }
+    }
+  },
+  {
+    method: 'POST',
+    path: '/content-review/{documentId}/results/v2/{index}',
+    handler: findingV2Controller.postContentReviewFeedback,
+    options: {
+      validate: {
+        params: Joi.object({
+          documentId: Joi.string().required(),
+          index: Joi.number().integer().min(0).required()
+        }),
+        payload: feedbackPayloadSchema,
+        failAction: findingV2Controller.contentReviewFeedbackFailAction
       }
     }
   }

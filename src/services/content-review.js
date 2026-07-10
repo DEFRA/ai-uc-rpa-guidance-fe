@@ -95,7 +95,7 @@ async function getReviewResults (documentId) {
   const doc = documents.data.items.find((d) => d.id === documentId)
   const documentTitle = doc?.title || doc?.filename || documentId
 
-  return ReviewResultsOutcome.success({
+  return ReviewResultsOutcome.success(res.data.jobId, {
     documentTitle,
     ...res.data.result
   })

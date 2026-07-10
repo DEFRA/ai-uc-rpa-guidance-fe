@@ -1,14 +1,19 @@
 import { constants as statusCodes } from 'node:http2'
 import { vi } from 'vitest'
 
-const { mockGetLatestAnalysis } = vi.hoisted(() => ({
-  mockGetLatestAnalysis: vi.fn()
+const { mockGetLatestAnalysis, mockCreateFeedback, mockGetFeedbackForFinding } = vi.hoisted(() => ({
+  mockGetLatestAnalysis: vi.fn(),
+  mockCreateFeedback: vi.fn(),
+  mockGetFeedbackForFinding: vi.fn()
 }))
 
 vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
   listDocuments: vi.fn(),
   startAnalysis: vi.fn(),
-  getLatestAnalysis: mockGetLatestAnalysis
+  getLatestAnalysis: mockGetLatestAnalysis,
+  createFeedback: mockCreateFeedback,
+  getFeedbackForJob: vi.fn(),
+  getFeedbackForFinding: mockGetFeedbackForFinding
 }))
 
 import { createServer } from '../../../../src/server/server.js'
@@ -36,6 +41,7 @@ function resultWith (findings) {
   return {
     ok: true,
     data: {
+      jobId: 'job-1',
       result: {
         document_title: 'RPA Guidance',
         verdict: 'not_ready',
@@ -57,6 +63,10 @@ describe('#publishingCheckResultsController', () => {
 
   afterAll(async () => {
     await server.stop({ timeout: 0 })
+  })
+
+  beforeEach(() => {
+    mockGetFeedbackForFinding.mockResolvedValue({ ok: false, status: 404, data: null })
   })
 
   describe('GET /publishing-checks/{documentId}/results/v2', () => {
@@ -160,6 +170,87 @@ describe('#publishingCheckResultsController', () => {
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+  })
+
+  describe('POST /publishing-checks/{documentId}/results/v2/{index}', () => {
+    test('Should submit feedback and redirect back to the finding on success', async () => {
+      mockGetLatestAnalysis.mockResolvedValueOnce(resultWith(FINDINGS))
+      mockCreateFeedback.mockResolvedValueOnce({ ok: true, status: 201, data: { id: 'fb-1' } })
+
+      const { statusCode, headers } = await server.inject({
+        method: 'POST',
+        url: '/publishing-checks/doc-1/results/v2/0',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
+      expect(headers.location).toBe('/publishing-checks/doc-1/results/v2/0')
+      expect(mockCreateFeedback).toHaveBeenCalledWith(
+        expect.objectContaining({ agent: 'checker', findingIndex: 0, verdict: 'fix' })
+      )
+    })
+
+    test('Should accept an optional comment alongside a false_positive verdict', async () => {
+      mockGetLatestAnalysis.mockResolvedValueOnce(resultWith(FINDINGS))
+      mockCreateFeedback.mockResolvedValueOnce({ ok: true, status: 201, data: { id: 'fb-2' } })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/publishing-checks/doc-1/results/v2/0',
+        payload: { verdict: 'false_positive', comment: 'This does not apply here' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
+      expect(mockCreateFeedback).toHaveBeenCalledWith(
+        expect.objectContaining({ verdict: 'false_positive', comment: 'This does not apply here' })
+      )
+    })
+
+    test('Should re-render with an error and 400 when verdict is missing or invalid', async () => {
+      mockGetLatestAnalysis.mockResolvedValueOnce(resultWith(FINDINGS))
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/publishing-checks/doc-1/results/v2/0',
+        payload: { verdict: 'not_a_real_verdict' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_BAD_REQUEST)
+      expect(payload).toContain('There is a problem')
+      expect(payload).toContain('Select how this finding should be treated')
+    })
+
+    test('Should re-render with an error and 400 when the comment is too long', async () => {
+      mockGetLatestAnalysis.mockResolvedValueOnce(resultWith(FINDINGS))
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/publishing-checks/doc-1/results/v2/0',
+        payload: { verdict: 'wont_fix', comment: 'a'.repeat(501) }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_BAD_REQUEST)
+      expect(payload).toContain('There is a problem')
+    })
+
+    test('Should re-render the finding with a notice and 409 when feedback already exists', async () => {
+      mockGetLatestAnalysis.mockResolvedValueOnce(resultWith(FINDINGS))
+      mockCreateFeedback.mockResolvedValueOnce({ ok: false, status: 409, data: null })
+      mockGetFeedbackForFinding.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { verdict: 'fix', comment: null }
+      })
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/publishing-checks/doc-1/results/v2/0',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_CONFLICT)
+      expect(payload).toContain('Feedback has already been submitted for this finding')
     })
   })
 })

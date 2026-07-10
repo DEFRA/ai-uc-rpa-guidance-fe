@@ -17,7 +17,7 @@ async function getPublishingCheckResultsV2 (request, h) {
     throw Boom.notFound('No analysis found for this document')
   }
 
-  return h.view('publishing-checks/results/v2/page.njk', resultsViewModel(outcome.result, documentId))
+  return h.view('publishing-checks/results/v2/page.njk', resultsViewModel(outcome.result, documentId, outcome.jobId))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 

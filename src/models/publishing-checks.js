@@ -12,10 +12,11 @@ class StartCheckOutcome {
 }
 
 class CheckResultsOutcome {
-  static success (result) { return new CheckResultsOutcome(result, null) }
-  static notFound () { return new CheckResultsOutcome(null, 'not_found') }
+  static success (jobId, result) { return new CheckResultsOutcome(jobId, result, null) }
+  static notFound () { return new CheckResultsOutcome(null, null, 'not_found') }
 
-  constructor (result, reason) {
+  constructor (jobId, result, reason) {
+    this.jobId = jobId
     this.result = result
     this.reason = reason
   }
