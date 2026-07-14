@@ -1,5 +1,5 @@
 import { contentReviewBreadcrumbs } from '../../../../common/breadcrumbs.js'
-import { severityTag } from '../../../../../common/findings.js'
+import { buildFindingDetailViewModel } from '../../../../../common/finding-detail-view-model.js'
 import { normaliseFindings } from '../view-model.js'
 
 /**
@@ -24,15 +24,13 @@ function detailViewModel (result, documentId, index, jobId, feedback = null, opt
 
   const resultsHref = `/content-review/${documentId}/results/v2`
 
-  return {
-    pageTitle: finding.title,
+  return buildFindingDetailViewModel({
+    finding,
     page: 'content-review',
-    finding: { ...finding, severityTag: severityTag(finding.severity) },
-    jobId,
-    findingIndex: index,
     agent: 'critic',
+    jobId,
+    index,
     feedback,
-    feedbackSubmitted: feedback !== null,
     errorMessage,
     alreadySubmittedNotice,
     actionUrl: `/content-review/${documentId}/results/v2/${index}`,
@@ -41,7 +39,7 @@ function detailViewModel (result, documentId, index, jobId, feedback = null, opt
       ...contentReviewBreadcrumbs(),
       { text: result.documentTitle, href: resultsHref }
     ]
-  }
+  })
 }
 
 export {
