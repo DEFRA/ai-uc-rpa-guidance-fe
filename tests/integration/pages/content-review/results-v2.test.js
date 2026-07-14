@@ -236,5 +236,54 @@ describe('#contentReviewResultsController', () => {
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_CONFLICT)
       expect(payload).toContain('Feedback has already been submitted for this finding')
     })
+
+    test('Should 404 when no review exists for the document', async () => {
+      mockGetLatestReview.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should 404 when feedback already exists but the finding index is out of range', async () => {
+      mockReview()
+      mockCreateFeedback.mockResolvedValueOnce({ ok: false, status: 409, data: null })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/99',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should 404 when the payload is invalid and no review exists for the document', async () => {
+      mockGetLatestReview.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'not_a_real_verdict' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should 404 when the payload is invalid and the finding index is out of range', async () => {
+      mockReview()
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/99',
+        payload: { verdict: 'not_a_real_verdict' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
   })
 })

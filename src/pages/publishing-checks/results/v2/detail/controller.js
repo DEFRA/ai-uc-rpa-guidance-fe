@@ -4,6 +4,10 @@ import { getCheckResults } from '../../../../../services/publishing-checks.js'
 import { getFindingFeedback, submitFeedback } from '../../../../../services/feedback.js'
 import { detailViewModel } from './view-model.js'
 
+const VIEW_PATH = 'publishing-checks/results/v2/detail/page.njk'
+const NO_ANALYSIS_FOUND_MESSAGE = 'No analysis found for this document'
+const FINDING_NOT_FOUND_MESSAGE = 'Finding not found'
+
 /**
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
@@ -16,17 +20,17 @@ async function getPublishingCheckFinding (request, h) {
   const outcome = await getCheckResults(documentId)
 
   if (!outcome.succeeded) {
-    throw Boom.notFound('No analysis found for this document')
+    throw Boom.notFound(NO_ANALYSIS_FOUND_MESSAGE)
   }
 
   const feedback = await getFindingFeedback(outcome.jobId, numericIndex)
   const viewModel = detailViewModel(outcome.result, documentId, numericIndex, outcome.jobId, feedback)
 
   if (!viewModel) {
-    throw Boom.notFound('Finding not found')
+    throw Boom.notFound(FINDING_NOT_FOUND_MESSAGE)
   }
 
-  return h.view('publishing-checks/results/v2/detail/page.njk', viewModel)
+  return h.view(VIEW_PATH, viewModel)
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
@@ -43,7 +47,7 @@ async function postPublishingCheckFeedback (request, h) {
   const outcome = await getCheckResults(documentId)
 
   if (!outcome.succeeded) {
-    throw Boom.notFound('No analysis found for this document')
+    throw Boom.notFound(NO_ANALYSIS_FOUND_MESSAGE)
   }
 
   const result = await submitFeedback({
@@ -61,10 +65,10 @@ async function postPublishingCheckFeedback (request, h) {
     })
 
     if (!viewModel) {
-      throw Boom.notFound('Finding not found')
+      throw Boom.notFound(FINDING_NOT_FOUND_MESSAGE)
     }
 
-    return h.view('publishing-checks/results/v2/detail/page.njk', viewModel)
+    return h.view(VIEW_PATH, viewModel)
       .code(statusCodes.HTTP_STATUS_CONFLICT)
   }
 
@@ -87,7 +91,7 @@ async function publishingCheckFeedbackFailAction (request, h, error) {
   const outcome = await getCheckResults(documentId)
 
   if (!outcome.succeeded) {
-    throw Boom.notFound('No analysis found for this document')
+    throw Boom.notFound(NO_ANALYSIS_FOUND_MESSAGE)
   }
 
   const feedback = await getFindingFeedback(outcome.jobId, numericIndex)
@@ -96,12 +100,12 @@ async function publishingCheckFeedbackFailAction (request, h, error) {
   })
 
   if (!viewModel) {
-    throw Boom.notFound('Finding not found')
+    throw Boom.notFound(FINDING_NOT_FOUND_MESSAGE)
   }
 
   request.log(['error', 'feedback-validation'], error)
 
-  return h.view('publishing-checks/results/v2/detail/page.njk', viewModel)
+  return h.view(VIEW_PATH, viewModel)
     .code(statusCodes.HTTP_STATUS_BAD_REQUEST)
     .takeover()
 }
