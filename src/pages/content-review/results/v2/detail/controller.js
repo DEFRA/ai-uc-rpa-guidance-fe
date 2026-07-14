@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { statusCodes } from '../../../../../constants/status-codes.js'
 import { getReviewResults } from '../../../../../services/content-review.js'
-import { getFindingFeedback, submitFeedback } from '../../../../../services/feedback.js'
+import { getFindingDetail, submitFindingFeedback } from '../../../../../services/finding-detail.js'
 import { detailViewModel } from './view-model.js'
 
 const VIEW_PATH = 'content-review/results/v2/detail/page.njk'
@@ -17,14 +17,13 @@ async function getContentReviewFinding (request, h) {
   const { documentId, index } = request.params
   const numericIndex = Number(index)
 
-  const outcome = await getReviewResults(documentId)
+  const outcome = await getFindingDetail({ getResults: getReviewResults, documentId, index: numericIndex })
 
   if (!outcome.succeeded) {
     throw Boom.notFound(NO_REVIEW_FOUND_MESSAGE)
   }
 
-  const feedback = await getFindingFeedback(outcome.jobId, numericIndex)
-  const viewModel = detailViewModel(outcome.result, documentId, numericIndex, outcome.jobId, feedback)
+  const viewModel = detailViewModel(outcome.result, documentId, numericIndex, outcome.jobId, outcome.feedback)
 
   if (!viewModel) {
     throw Boom.notFound(FINDING_NOT_FOUND_MESSAGE)
@@ -44,23 +43,21 @@ async function postContentReviewFeedback (request, h) {
   const numericIndex = Number(index)
   const { verdict, comment } = request.payload
 
-  const outcome = await getReviewResults(documentId)
+  const outcome = await submitFindingFeedback({
+    getResults: getReviewResults,
+    documentId,
+    agent: 'critic',
+    index: numericIndex,
+    verdict,
+    comment
+  })
 
   if (!outcome.succeeded) {
     throw Boom.notFound(NO_REVIEW_FOUND_MESSAGE)
   }
 
-  const result = await submitFeedback({
-    jobId: outcome.jobId,
-    agent: 'critic',
-    findingIndex: numericIndex,
-    verdict,
-    comment: comment || null
-  })
-
-  if (result.alreadySubmitted) {
-    const feedback = await getFindingFeedback(outcome.jobId, numericIndex)
-    const viewModel = detailViewModel(outcome.result, documentId, numericIndex, outcome.jobId, feedback, {
+  if (outcome.alreadySubmitted) {
+    const viewModel = detailViewModel(outcome.result, documentId, numericIndex, outcome.jobId, outcome.feedback, {
       alreadySubmittedNotice: true
     })
 
@@ -88,14 +85,13 @@ async function contentReviewFeedbackFailAction (request, h, error) {
   const { documentId, index } = request.params
   const numericIndex = Number(index)
 
-  const outcome = await getReviewResults(documentId)
+  const outcome = await getFindingDetail({ getResults: getReviewResults, documentId, index: numericIndex })
 
   if (!outcome.succeeded) {
     throw Boom.notFound(NO_REVIEW_FOUND_MESSAGE)
   }
 
-  const feedback = await getFindingFeedback(outcome.jobId, numericIndex)
-  const viewModel = detailViewModel(outcome.result, documentId, numericIndex, outcome.jobId, feedback, {
+  const viewModel = detailViewModel(outcome.result, documentId, numericIndex, outcome.jobId, outcome.feedback, {
     errorMessage: 'Select how this finding should be treated'
   })
 
