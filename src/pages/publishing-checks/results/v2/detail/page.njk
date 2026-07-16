@@ -1,6 +1,7 @@
 {% extends "common/layout.njk" %}
 
 {% from "components/finding-detail/macro.njk" import findingDetail %}
+{% from "components/feedback-form/macro.njk" import feedbackForm %}
 
 {% set page = 'publishing-checks' %}
 
@@ -11,6 +12,17 @@
         <div class="govuk-grid-column-two-thirds">
 
           {{ findingDetail(finding) }}
+
+          {{ feedbackForm({
+            feedbackSubmitted: feedbackSubmitted,
+            feedback: feedback,
+            actionUrl: actionUrl,
+            findingIndex: findingIndex,
+            jobId: jobId,
+            agent: agent,
+            errorMessage: errorMessage,
+            alreadySubmittedNotice: alreadySubmittedNotice
+          }) }}
 
           <p class="govuk-body govuk-!-margin-top-6">
             <a class="govuk-link" href="{{ backHref }}">Back to all findings</a>

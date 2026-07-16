@@ -1,0 +1,118 @@
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{#
+  Renders a feedback form or read-only submitted feedback for a finding.
+
+  params = {
+    feedbackSubmitted: boolean,
+    feedback: { verdict, comment } | null,
+    actionUrl: string,
+    findingIndex: number,
+    jobId: string,
+    agent: string,
+    errorMessage: string|null,
+    alreadySubmittedNotice: boolean
+  }
+
+  Verdict is captured via two separate forms (rather than one form with a
+  radio group) so a user can act directly on a finding with a single click:
+  - "To fix" is a standalone quick action with no comment, since it needs no
+    justification.
+  - "Won't fix" / "False positive" sit alongside an optional comment box,
+    since these verdicts benefit from an explanation.
+#}
+{% macro feedbackForm(params) %}
+  <div class="govuk-!-margin-top-8">
+    <h2 class="govuk-heading-m">Your feedback on this finding</h2>
+
+    {% if params.errorMessage %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: [{ text: params.errorMessage }]
+      }) }}
+    {% endif %}
+
+    {% if params.alreadySubmittedNotice %}
+      {{ govukNotificationBanner({
+        text: "Feedback has already been submitted for this finding."
+      }) }}
+    {% endif %}
+
+    {% if params.feedbackSubmitted %}
+
+      {{ govukNotificationBanner({
+        type: "success",
+        titleText: "Feedback submitted",
+        text: "Thank you for your feedback on this finding."
+      }) }}
+
+      {% if params.feedback.verdict == "fix" %}{% set verdictLabel = "To fix" %}
+      {% elif params.feedback.verdict == "wont_fix" %}{% set verdictLabel = "Won't fix" %}
+      {% else %}{% set verdictLabel = "False positive" %}{% endif %}
+
+      <dl class="govuk-summary-list">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Verdict</dt>
+          <dd class="govuk-summary-list__value">{{ verdictLabel }}</dd>
+        </div>
+        {% if params.feedback.comment %}
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">Comment</dt>
+            <dd class="govuk-summary-list__value">{{ params.feedback.comment }}</dd>
+          </div>
+        {% endif %}
+      </dl>
+
+    {% else %}
+
+      <form method="post" action="{{ params.actionUrl }}" novalidate>
+        <input type="hidden" name="crumb" value="{{ crumb }}">
+
+        {{ govukButton({
+          text: "To fix",
+          name: "verdict",
+          value: "fix"
+        }) }}
+      </form>
+
+      <form method="post" action="{{ params.actionUrl }}" novalidate>
+        <input type="hidden" name="crumb" value="{{ crumb }}">
+
+        {{ govukCharacterCount({
+          name: "comment",
+          id: "comment",
+          maxlength: 500,
+          label: {
+            text: "Comment (optional)",
+            classes: "govuk-label--s"
+          },
+          hint: {
+            text: "Explain why this finding won't be fixed or is a false positive."
+          },
+          rows: 3
+        }) }}
+
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Won't fix",
+            name: "verdict",
+            value: "wont_fix",
+            classes: "govuk-button--secondary"
+          }) }}
+
+          {{ govukButton({
+            text: "False positive",
+            name: "verdict",
+            value: "false_positive",
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+      </form>
+
+    {% endif %}
+  </div>
+{% endmacro %}

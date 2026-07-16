@@ -17,7 +17,7 @@ async function getContentReviewResultsV2 (request, h) {
     throw Boom.notFound('No content review found for this document')
   }
 
-  return h.view('content-review/results/v2/page.njk', resultsViewModel(outcome.result, documentId))
+  return h.view('content-review/results/v2/page.njk', resultsViewModel(outcome.result, documentId, outcome.jobId))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 

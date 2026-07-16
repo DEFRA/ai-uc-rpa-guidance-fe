@@ -1,5 +1,5 @@
 import { contentReviewBreadcrumbs } from '../../../../common/breadcrumbs.js'
-import { severityTag } from '../../../../../common/findings.js'
+import { buildFindingDetailViewModel } from '../../../../../common/finding-detail-view-model.js'
 import { normaliseFindings } from '../view-model.js'
 
 /**
@@ -9,9 +9,13 @@ import { normaliseFindings } from '../view-model.js'
  * @param {object} result - The critique response, plus documentTitle.
  * @param {string} documentId
  * @param {number} index
+ * @param {string} jobId
+ * @param {object|null} feedback
+ * @param {{ errorMessage?: string|null, alreadySubmittedNotice?: boolean }} [options]
  * @returns {object|null}
  */
-function detailViewModel (result, documentId, index) {
+function detailViewModel (result, documentId, index, jobId, feedback = null, options = {}) {
+  const { errorMessage = null, alreadySubmittedNotice = false } = options
   const finding = normaliseFindings(result)[index]
 
   if (!finding) {
@@ -20,16 +24,22 @@ function detailViewModel (result, documentId, index) {
 
   const resultsHref = `/content-review/${documentId}/results/v2`
 
-  return {
-    pageTitle: finding.title,
+  return buildFindingDetailViewModel({
+    finding,
     page: 'content-review',
-    finding: { ...finding, severityTag: severityTag(finding.severity) },
+    agent: 'critic',
+    jobId,
+    index,
+    feedback,
+    errorMessage,
+    alreadySubmittedNotice,
+    actionUrl: `/content-review/${documentId}/results/v2/${index}`,
     backHref: resultsHref,
     breadcrumbs: [
       ...contentReviewBreadcrumbs(),
       { text: result.documentTitle, href: resultsHref }
     ]
-  }
+  })
 }
 
 export {

@@ -102,6 +102,24 @@ async function getLatestReview (documentId) {
   })
 }
 
+async function createFeedback (payload) {
+  return request('/feedback', {
+    method: 'POST',
+    body: payload,
+    expected: [http2StatusCodes.HTTP_STATUS_CONFLICT]
+  })
+}
+
+async function getFeedbackForJob (jobId) {
+  return request(`/feedback/jobs/${jobId}`)
+}
+
+async function getFeedbackForFinding (jobId, findingIndex) {
+  return request(`/feedback/jobs/${jobId}/findings/${findingIndex}`, {
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
 export {
   listDocuments,
   getDocument,
@@ -112,5 +130,8 @@ export {
   startAnalysis,
   getLatestAnalysis,
   startReview,
-  getLatestReview
+  getLatestReview,
+  createFeedback,
+  getFeedbackForJob,
+  getFeedbackForFinding
 }

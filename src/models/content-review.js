@@ -12,10 +12,11 @@ class StartReviewOutcome {
 }
 
 class ReviewResultsOutcome {
-  static success (result) { return new ReviewResultsOutcome(result, null) }
-  static notFound () { return new ReviewResultsOutcome(null, 'not_found') }
+  static success (jobId, result) { return new ReviewResultsOutcome(jobId, result, null) }
+  static notFound () { return new ReviewResultsOutcome(null, null, 'not_found') }
 
-  constructor (result, reason) {
+  constructor (jobId, result, reason) {
+    this.jobId = jobId
     this.result = result
     this.reason = reason
   }

@@ -1,15 +1,20 @@
 import { constants as statusCodes } from 'node:http2'
 import { vi } from 'vitest'
 
-const { mockListDocuments, mockGetLatestReview } = vi.hoisted(() => ({
+const { mockListDocuments, mockGetLatestReview, mockCreateFeedback, mockGetFeedbackForFinding } = vi.hoisted(() => ({
   mockListDocuments: vi.fn(),
-  mockGetLatestReview: vi.fn()
+  mockGetLatestReview: vi.fn(),
+  mockCreateFeedback: vi.fn(),
+  mockGetFeedbackForFinding: vi.fn()
 }))
 
 vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
   listDocuments: mockListDocuments,
   startReview: vi.fn(),
-  getLatestReview: mockGetLatestReview
+  getLatestReview: mockGetLatestReview,
+  createFeedback: mockCreateFeedback,
+  getFeedbackForJob: vi.fn(),
+  getFeedbackForFinding: mockGetFeedbackForFinding
 }))
 
 import { createServer } from '../../../../src/server/server.js'
@@ -73,6 +78,10 @@ describe('#contentReviewResultsController', () => {
 
   afterAll(async () => {
     await server.stop({ timeout: 0 })
+  })
+
+  beforeEach(() => {
+    mockGetFeedbackForFinding.mockResolvedValue({ ok: false, status: 404, data: null })
   })
 
   describe('GET /content-review/{documentId}/results/v2', () => {
@@ -142,6 +151,136 @@ describe('#contentReviewResultsController', () => {
       const { statusCode } = await server.inject({
         method: 'GET',
         url: '/content-review/doc-1/results/v2/0'
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+  })
+
+  describe('POST /content-review/{documentId}/results/v2/{index}', () => {
+    test('Should submit feedback and redirect back to the finding on success', async () => {
+      mockReview()
+      mockCreateFeedback.mockResolvedValueOnce({ ok: true, status: 201, data: { id: 'fb-1' } })
+
+      const { statusCode, headers } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
+      expect(headers.location).toBe('/content-review/doc-1/results/v2/0')
+      expect(mockCreateFeedback).toHaveBeenCalledWith(
+        expect.objectContaining({ agent: 'critic', findingIndex: 0, verdict: 'fix' })
+      )
+    })
+
+    test('Should accept an optional comment alongside a wont_fix verdict', async () => {
+      mockReview()
+      mockCreateFeedback.mockResolvedValueOnce({ ok: true, status: 201, data: { id: 'fb-2' } })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'wont_fix', comment: 'Not a priority right now' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
+      expect(mockCreateFeedback).toHaveBeenCalledWith(
+        expect.objectContaining({ verdict: 'wont_fix', comment: 'Not a priority right now' })
+      )
+    })
+
+    test('Should re-render with an error and 400 when verdict is missing or invalid', async () => {
+      mockReview()
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'not_a_real_verdict' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_BAD_REQUEST)
+      expect(payload).toContain('There is a problem')
+      expect(payload).toContain('Select how this finding should be treated')
+    })
+
+    test('Should re-render with an error and 400 when the comment is too long', async () => {
+      mockReview()
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'wont_fix', comment: 'a'.repeat(501) }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_BAD_REQUEST)
+      expect(payload).toContain('There is a problem')
+    })
+
+    test('Should re-render the finding with a notice and 409 when feedback already exists', async () => {
+      mockReview()
+      mockCreateFeedback.mockResolvedValueOnce({ ok: false, status: 409, data: null })
+      mockGetFeedbackForFinding.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { verdict: 'fix', comment: null }
+      })
+
+      const { statusCode, payload } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_CONFLICT)
+      expect(payload).toContain('Feedback has already been submitted for this finding')
+    })
+
+    test('Should 404 when no review exists for the document', async () => {
+      mockGetLatestReview.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should 404 when feedback already exists but the finding index is out of range', async () => {
+      mockReview()
+      mockCreateFeedback.mockResolvedValueOnce({ ok: false, status: 409, data: null })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/99',
+        payload: { verdict: 'fix' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should 404 when the payload is invalid and no review exists for the document', async () => {
+      mockGetLatestReview.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/0',
+        payload: { verdict: 'not_a_real_verdict' }
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
+    })
+
+    test('Should 404 when the payload is invalid and the finding index is out of range', async () => {
+      mockReview()
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/content-review/doc-1/results/v2/99',
+        payload: { verdict: 'not_a_real_verdict' }
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
