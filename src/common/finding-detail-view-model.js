@@ -7,12 +7,18 @@ import { severityTag } from './findings.js'
  * the finding (or 404) and build the domain-specific fields (urls,
  * breadcrumbs, agent) themselves and pass them in explicitly.
  *
+ * The page heading is a stable "Finding N of M" label — finding titles are
+ * model-written prose, so they render as the lede paragraph rather than as
+ * a heading.
+ *
  * @param {object} params
  * @param {{ title: string, severity: string }} params.finding
  * @param {string} params.page
  * @param {string} params.agent
  * @param {string} params.jobId
  * @param {number} params.index
+ * @param {number} params.total - total findings in the review/check
+ * @param {string} params.caption - context shown above the h1 (document title)
  * @param {object|null} params.feedback
  * @param {string|null} params.errorMessage
  * @param {boolean} params.alreadySubmittedNotice
@@ -27,6 +33,8 @@ function buildFindingDetailViewModel ({
   agent,
   jobId,
   index,
+  total,
+  caption,
   feedback,
   errorMessage,
   alreadySubmittedNotice,
@@ -34,10 +42,17 @@ function buildFindingDetailViewModel ({
   backHref,
   breadcrumbs
 }) {
+  const heading = `Finding ${index + 1} of ${total}`
+
   return {
-    pageTitle: finding.title,
+    pageTitle: heading,
     page,
-    finding: { ...finding, severityTag: severityTag(finding.severity) },
+    caption,
+    finding: {
+      ...finding,
+      severityTag: severityTag(finding.severity),
+      heading
+    },
     jobId,
     findingIndex: index,
     agent,

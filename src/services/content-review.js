@@ -76,8 +76,7 @@ async function startReview (documentId) {
 }
 
 /**
- * Fetches the latest content review for a document, resolving a human-readable
- * title from the document list (the critique result itself carries no title).
+ * Fetches the latest content review for a document.
  *
  * @param {string} documentId
  * @returns {Promise<ReviewResultsOutcome>}
@@ -91,14 +90,7 @@ async function getReviewResults (documentId) {
     return ReviewResultsOutcome.notFound()
   }
 
-  const documents = await guidanceApi.listDocuments()
-  const doc = documents.data.items.find((d) => d.id === documentId)
-  const documentTitle = doc?.title || doc?.filename || documentId
-
-  return ReviewResultsOutcome.success(res.data.jobId, {
-    documentTitle,
-    ...res.data.result
-  })
+  return ReviewResultsOutcome.success(res.data.jobId, res.data.result)
 }
 
 export {

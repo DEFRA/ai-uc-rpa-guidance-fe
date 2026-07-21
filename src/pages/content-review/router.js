@@ -5,8 +5,7 @@ import { feedbackPayloadSchema } from '../../schemas/feedback.js'
 
 import * as confirmationController from './confirmation/controller.js'
 import * as resultsController from './results/controller.js'
-import * as resultsV2Controller from './results/v2/controller.js'
-import * as findingV2Controller from './results/v2/detail/controller.js'
+import * as findingController from './results/detail/controller.js'
 import * as startController from './start/controller.js'
 import * as statusController from './status/controller.js'
 
@@ -57,13 +56,8 @@ const routes = [
   },
   {
     method: 'GET',
-    path: '/content-review/{documentId}/results/v2',
-    handler: resultsV2Controller.getContentReviewResultsV2
-  },
-  {
-    method: 'GET',
-    path: '/content-review/{documentId}/results/v2/{index}',
-    handler: findingV2Controller.getContentReviewFinding,
+    path: '/content-review/{documentId}/results/{index}',
+    handler: findingController.getContentReviewFinding,
     options: {
       validate: {
         params: Joi.object({
@@ -75,8 +69,8 @@ const routes = [
   },
   {
     method: 'POST',
-    path: '/content-review/{documentId}/results/v2/{index}',
-    handler: findingV2Controller.postContentReviewFeedback,
+    path: '/content-review/{documentId}/results/{index}',
+    handler: findingController.postContentReviewFeedback,
     options: {
       validate: {
         params: Joi.object({
@@ -84,7 +78,7 @@ const routes = [
           index: Joi.number().integer().min(0).required()
         }),
         payload: feedbackPayloadSchema,
-        failAction: findingV2Controller.contentReviewFeedbackFailAction
+        failAction: findingController.contentReviewFeedbackFailAction
       }
     }
   }

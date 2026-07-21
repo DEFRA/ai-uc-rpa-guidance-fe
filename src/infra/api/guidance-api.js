@@ -89,7 +89,7 @@ async function getLatestAnalysis (id) {
 }
 
 async function startReview (documentId) {
-  return request('/critique/jobs', {
+  return request('/review/analyse', {
     method: 'POST',
     body: { documentId },
     expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND, http2StatusCodes.HTTP_STATUS_CONFLICT]
@@ -97,7 +97,7 @@ async function startReview (documentId) {
 }
 
 async function getLatestReview (documentId) {
-  return request(`/critique/documents/${documentId}/analysis`, {
+  return request(`/review/documents/${documentId}/review`, {
     expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
   })
 }

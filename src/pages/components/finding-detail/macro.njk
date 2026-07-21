@@ -5,13 +5,20 @@
    list, with any verbatim quote shown as an inset block below. Used by both
    the publishing-checks and content-review per-finding detail pages.
 
+   The h1 is the stable "Finding N of M" heading; the model-written finding
+   title is prose, so it renders as the lede paragraph instead.
+
    finding = {
-     title, location, severityTag: { text, classes },
+     heading, title, location, severityTag: { text, classes },
      sections: [ { heading, body, isQuote? } ]
    }
+   caption = context shown above the h1 (the document title)
 #}
-{% macro findingDetail(finding) %}
-  <h1 class="govuk-heading-l">{{ finding.title | renderLinks | safe }}</h1>
+{% macro findingDetail(finding, caption) %}
+  {% if caption %}<span class="govuk-caption-l">{{ caption }}</span>{% endif %}
+  <h1 class="govuk-heading-l">{{ finding.heading }}</h1>
+
+  <p class="govuk-body-l">{{ finding.title | renderLinks | safe }}</p>
 
   {% set rows = [{ key: { text: "Severity" }, value: { html: govukTag(finding.severityTag) } }] %}
   {% if finding.location %}

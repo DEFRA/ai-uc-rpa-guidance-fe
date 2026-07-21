@@ -117,33 +117,47 @@ describe('#contentReviewController', () => {
   })
 
   describe('GET /content-review/{documentId}/results', () => {
-    test('Should render the critique reports on success', async () => {
+    test('Should render the review results on success', async () => {
       mockGetLatestReview.mockResolvedValueOnce({
         ok: true,
         data: {
+          jobId: 'job-1',
           status: 'completed',
           result: {
-            status: 'review_completed',
-            reports: [{
-              standard: 'gds',
-              conformance_summary: 'Mostly conforms.',
-              findings: [{
-                rule_reference: 'GDS A11Y',
-                what: 'Heading too long',
-                where: 'Section 1',
-                quote: 'A very long heading',
-                why: 'Hard to scan',
-                fix: 'Shorten it',
-                severity: 'medium'
-              }]
+            status: 'completed',
+            document_title: 'guide.docx',
+            task_context: {
+              task: 'Process a claim',
+              user: 'A claims processor',
+              usage_context: 'Used live on calls'
+            },
+            usability: { verdict: 'partly', explanation: 'Some decisions unclear' },
+            principle_ratings: {
+              clear_purpose: 'partly_applied',
+              starts_with_the_reader: 'partly_applied',
+              task_focused_structure: 'partly_applied',
+              plain_english: 'partly_applied',
+              multiple_formats: 'partly_applied',
+              decision_led: 'partly_applied',
+              scan_friendly: 'partly_applied',
+              accessible_by_default: 'partly_applied',
+              consistent: 'partly_applied',
+              usable_under_pressure: 'partly_applied'
+            },
+            good_points: [],
+            findings: [{
+              principle: 'plain_english',
+              section: 'Section 1',
+              quote: 'A very long heading',
+              issue: 'Heading too long',
+              why_it_matters: 'Hard to scan',
+              severity: 'medium',
+              confidence: 'high',
+              recommendation: 'Shorten it'
             }],
             usage: { input_tokens: 10, output_tokens: 20 }
           }
         }
-      })
-      mockListDocuments.mockResolvedValueOnce({
-        ok: true,
-        data: { items: [{ id: 'doc-1', title: null, filename: 'guide.docx' }] }
       })
 
       const { statusCode, payload } = await server.inject({
@@ -153,7 +167,8 @@ describe('#contentReviewController', () => {
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
       expect(payload).toContain('Guidance content review')
-      expect(payload).toContain('GDS content standards')
+      expect(payload).toContain('Partly passes the usability test')
+      expect(payload).toContain('Principle ratings')
       expect(payload).toContain('Heading too long')
     })
 
