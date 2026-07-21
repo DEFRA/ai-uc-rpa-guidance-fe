@@ -16,7 +16,8 @@ import { normaliseFindings } from '../view-model.js'
  */
 function detailViewModel (result, documentId, index, jobId, feedback = null, options = {}) {
   const { errorMessage = null, alreadySubmittedNotice = false } = options
-  const finding = normaliseFindings(result)[index]
+  const findings = normaliseFindings(result)
+  const finding = findings[index]
 
   if (!finding) {
     return null
@@ -30,6 +31,8 @@ function detailViewModel (result, documentId, index, jobId, feedback = null, opt
     agent: 'checker',
     jobId,
     index,
+    total: findings.length,
+    caption: result.document_title,
     feedback,
     errorMessage,
     alreadySubmittedNotice,

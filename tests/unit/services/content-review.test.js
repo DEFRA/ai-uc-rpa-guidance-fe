@@ -105,24 +105,23 @@ describe('content-review service', () => {
       ;({ getReviewResults } = await import('../../../src/services/content-review.js'))
     })
 
-    test('Should return success with the critique result and resolved title', async () => {
+    test('Should return success with the review result and jobId', async () => {
+      const result = {
+        status: 'completed',
+        document_title: 'Guide',
+        usability: { verdict: 'partly', explanation: 'Some decisions unclear' },
+        findings: []
+      }
       mockGetLatestReview.mockResolvedValueOnce({
         ok: true,
-        data: {
-          status: 'completed',
-          result: { status: 'review_completed', reports: [{ standard: 'gds', findings: [] }] }
-        }
-      })
-      mockListDocuments.mockResolvedValueOnce({
-        ok: true,
-        data: { items: [{ id: 'doc-1', title: null, filename: 'guide.docx' }] }
+        data: { jobId: 'job-abc', status: 'completed', result }
       })
 
       const outcome = await getReviewResults('doc-1')
       expect(outcome.succeeded).toBe(true)
-      expect(outcome.result.documentTitle).toBe('guide.docx')
-      expect(outcome.result.status).toBe('review_completed')
-      expect(outcome.result.reports).toHaveLength(1)
+      expect(outcome.jobId).toBe('job-abc')
+      expect(outcome.result).toEqual(result)
+      expect(mockListDocuments).not.toHaveBeenCalled()
     })
 
     test('Should return not_found when no review exists (404)', async () => {

@@ -1,10 +1,10 @@
 import Boom from '@hapi/boom'
-import { statusCodes } from '../../../../../constants/status-codes.js'
-import { getReviewResults } from '../../../../../services/content-review.js'
-import { getFindingDetail, submitFindingFeedback } from '../../../../../services/finding-detail.js'
+import { statusCodes } from '../../../../constants/status-codes.js'
+import { getReviewResults } from '../../../../services/content-review.js'
+import { getFindingDetail, submitFindingFeedback } from '../../../../services/finding-detail.js'
 import { detailViewModel } from './view-model.js'
 
-const VIEW_PATH = 'content-review/results/v2/detail/page.njk'
+const VIEW_PATH = 'content-review/results/detail/page.njk'
 const NO_REVIEW_FOUND_MESSAGE = 'No content review found for this document'
 const FINDING_NOT_FOUND_MESSAGE = 'Finding not found'
 
@@ -46,7 +46,7 @@ async function postContentReviewFeedback (request, h) {
   const outcome = await submitFindingFeedback({
     getResults: getReviewResults,
     documentId,
-    agent: 'critic',
+    agent: 'reviewer',
     index: numericIndex,
     verdict,
     comment
@@ -69,7 +69,7 @@ async function postContentReviewFeedback (request, h) {
       .code(statusCodes.HTTP_STATUS_CONFLICT)
   }
 
-  return h.redirect(`/content-review/${documentId}/results/v2/${numericIndex}`)
+  return h.redirect(`/content-review/${documentId}/results/${numericIndex}`)
 }
 
 /**

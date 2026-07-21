@@ -287,7 +287,7 @@ describe('#guidanceApi', () => {
   })
 
   describe('#startReview', () => {
-    test('Should POST /critique/jobs with the documentId', async () => {
+    test('Should POST /review/analyse with the documentId', async () => {
       const job = { jobId: 'job-cr-1', status: 'pending' }
       fetchMock.mockResponseOnce(JSON.stringify(job), { status: 202 })
 
@@ -296,7 +296,7 @@ describe('#guidanceApi', () => {
       expect(res.ok).toBe(true)
       expect(res.data).toEqual(job)
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://guidance-api.test/critique/jobs',
+        'http://guidance-api.test/review/analyse',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ documentId: 'doc-456' })
@@ -335,7 +335,7 @@ describe('#guidanceApi', () => {
   })
 
   describe('#getLatestReview', () => {
-    test('Should GET /critique/documents/:id/analysis', async () => {
+    test('Should GET /review/documents/:id/review', async () => {
       const job = { jobId: 'job-cr-2', status: 'completed' }
       fetchMock.mockResponseOnce(JSON.stringify(job))
 
@@ -345,7 +345,7 @@ describe('#guidanceApi', () => {
       expect(res.data).toEqual(job)
       expect(fetchMock).toHaveBeenCalledWith(
         'http://guidance-api.test' +
-        '/critique/documents/doc-456/analysis',
+        '/review/documents/doc-456/review',
         expect.objectContaining({})
       )
     })

@@ -1,9 +1,10 @@
 {% extends "common/layout.njk" %}
 
+{% from "govuk/components/details/macro.njk" import govukDetails %}
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
-{% from "govuk/components/accordion/macro.njk" import govukAccordion %}
-{% from "components/content-review-finding/macro.njk" import critiqueFindingCard %}
-{% from "components/severity/macro.njk" import severityTag %}
+{% from "govuk/components/task-list/macro.njk" import govukTaskList %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
 
 {% set page = 'content-review' %}
 
@@ -11,79 +12,119 @@
   <div class="govuk-width-container">
     <main class="govuk-main-wrapper" id="main-content" role="main">
 
-      {# ── Notification banner — overall outcome ───────────────────────── #}
-      {% if not hasFindings %}
+      {# ── Notification banner — the final usability test ──────────────── #}
+      {% if usability.verdict == 'yes' %}
         {{ govukNotificationBanner({
           type: "success",
-          titleText: "No issues found",
-          html: "<p class=\"govuk-body\">This document conforms to the GDS content standards and the DEFRA style guide.</p>"
+          titleText: "Passes the usability test",
+          text: "A user can follow this guidance under pressure and get it right first time."
+        }) }}
+      {% elif usability.verdict == 'partly' %}
+        {{ govukNotificationBanner({
+          titleText: "Partly passes the usability test",
+          text: "Improvements are needed before a user can reliably get it right first time."
         }) }}
       {% else %}
         {{ govukNotificationBanner({
-          titleText: "Review complete",
-          html: "<p class=\"govuk-body\">" + totalFindings + (" issue" if totalFindings == 1 else " issues") + " identified across the standards reviewed.</p>"
+          type: "important",
+          titleText: "Does not pass the usability test",
+          text: "A user cannot complete the task correctly with this guidance. Resolve the findings below.",
+          attributes: { role: "alert" }
         }) }}
       {% endif %}
 
-      {# ── Page heading ────────────────────────────────────────────────── #}
+      {# ── Page heading + task and user context ────────────────────────── #}
       <span class="govuk-caption-m" style="color: #505a5f">Guidance content review</span>
       <h1 class="govuk-heading-l">{{ documentTitle }}</h1>
 
-      {% if resultsV2Href %}
-        <p class="govuk-body-s">
-          <a class="govuk-link" href="{{ resultsV2Href }}">Preview the new layout</a>
-        </p>
-      {% endif %}
+      {% set taskContextHtml %}
+        {{ govukSummaryList({ rows: taskContextRows }) }}
+      {% endset %}
+      {{ govukDetails({
+        summaryText: "Task and user context",
+        html: taskContextHtml
+      }) }}
 
-      {# ── Structural drift warnings ───────────────────────────────────── #}
-      {% if invariantWarnings | length %}
-        <div class="govuk-warning-text">
-          <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
-          <strong class="govuk-warning-text__text">
-            <span class="govuk-visually-hidden">Warning</span>
-            {% for warning in invariantWarnings %}{{ warning }}{% if not loop.last %}; {% endif %}{% endfor %}
-          </strong>
-        </div>
-      {% endif %}
+      {# ── Findings and principle ratings, in separate tabs ────────────── #}
+      {% set findingsPanelHtml %}
+        <h2 class="govuk-heading-m">Findings ({{ totalFindings }})</h2>
 
-      {# ── Issue overview ──────────────────────────────────────────────── #}
-      {% if severityCounts | length %}
-        <h2 class="govuk-heading-m">Issue overview</h2>
-        <div class="app-issue-overview">
-          {% for item in severityCounts %}
-            <div class="app-issue-overview__box">
-              {{ severityTag(item.severity) }}
-              <span class="app-issue-overview__count">{{ item.count }}</span>
-              <span class="app-issue-overview__label">{{ "issue" if item.count == 1 else "issues" }}</span>
+        {% if severityRows | length %}
+          <div class="govuk-grid-row">
+            <div class="govuk-grid-column-one-third">
+              {{ govukSummaryList({ card: { title: { text: "Issue overview" } }, rows: severityRows }) }}
             </div>
-          {% endfor %}
-        </div>
+          </div>
+        {% endif %}
+
+        {% if importantItems | length %}
+          <h3 class="govuk-heading-s">Important to fix</h3>
+          {{ govukTaskList({ idPrefix: "important", items: importantItems }) }}
+        {% endif %}
+
+        {% if suggestionItems | length %}
+          <h3 class="govuk-heading-s govuk-!-margin-top-6">Suggestions</h3>
+          {{ govukTaskList({ idPrefix: "suggestions", items: suggestionItems }) }}
+        {% endif %}
+
+        {% if not totalFindings %}
+          <p class="govuk-body">No findings were identified.</p>
+        {% endif %}
+      {% endset %}
+
+      {% set ratingsPanelHtml %}
+        <h2 class="govuk-heading-m">Principle ratings</h2>
+        <p class="govuk-body-s">The evidence behind each rating is in the findings.</p>
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header govuk-!-width-one-half">Principle</th>
+              <th scope="col" class="govuk-table__header">Rating</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for rating in principleRatings %}
+              <tr class="govuk-table__row">
+                <th scope="row" class="govuk-table__header">{{ rating.label }}</th>
+                <td class="govuk-table__cell">
+                  <strong class="govuk-tag {{ rating.tag.classes }}">{{ rating.tag.text }}</strong>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endset %}
+
+      {{ govukTabs({
+        items: [
+          {
+            label: "Findings (" + totalFindings + ")",
+            id: "findings",
+            panel: { html: findingsPanelHtml }
+          },
+          {
+            label: "Principle ratings",
+            id: "principle-ratings",
+            panel: { html: ratingsPanelHtml }
+          }
+        ]
+      }) }}
+
+      {# ── What the guidance does well (secondary, collapsed) ──────────── #}
+      {% if goodPoints | length %}
+        <details class="govuk-details govuk-!-margin-top-6">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">What the guidance does well</span>
+          </summary>
+          <div class="govuk-details__text">
+            {% for point in goodPoints %}
+              <h3 class="govuk-heading-s">{{ point.label }}</h3>
+              <div class="govuk-inset-text">{{ point.quote }}</div>
+              <p class="govuk-body">{{ point.comment }}</p>
+            {% endfor %}
+          </div>
+        </details>
       {% endif %}
-
-      {# ── Per-standard reports ────────────────────────────────────────── #}
-      {% for report in reports %}
-        <h2 class="govuk-heading-m">{{ report.label }}</h2>
-
-        {% if report.conformanceSummary %}
-          <p class="govuk-body">{{ report.conformanceSummary }}</p>
-        {% endif %}
-
-        {% if report.count %}
-          {% set accordionItems = [] %}
-          {% set headingHtml %}
-            <span class="app-accordion-heading__category">Findings</span>
-            {{ severityTag(report.worst, 'app-accordion-heading__tag') }}
-            <span class="app-accordion-heading__count govuk-body-s">{{ report.count }} {{ "issue" if report.count == 1 else "issues" }}</span>
-          {% endset %}
-          {% set contentHtml %}
-            {% for finding in report.findings %}{{ critiqueFindingCard(finding) }}{% endfor %}
-          {% endset %}
-          {% if accordionItems.push({ heading: { html: headingHtml }, content: { html: contentHtml } }) %}{% endif %}
-          {{ govukAccordion({ id: "findings-accordion-" + report.standard, items: accordionItems }) }}
-        {% else %}
-          <p class="govuk-body">No issues were identified against this standard.</p>
-        {% endif %}
-      {% endfor %}
 
       {# ── Token usage ─────────────────────────────────────────────────── #}
       {% if usage %}
