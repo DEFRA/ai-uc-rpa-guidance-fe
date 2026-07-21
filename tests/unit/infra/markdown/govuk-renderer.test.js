@@ -8,9 +8,17 @@ const render = (markdown) =>
 
 describe('#govukRenderer', () => {
   test('applies govuk heading classes by depth', () => {
-    expect(render('# Title')).toContain('<h1 class="govuk-heading-xl">')
-    expect(render('## Sub')).toContain('<h2 class="govuk-heading-l">')
-    expect(render('### Deeper')).toContain('<h3 class="govuk-heading-m">')
+    expect(render('# Title')).toContain('class="govuk-heading-xl"')
+    expect(render('## Sub')).toContain('class="govuk-heading-l"')
+    expect(render('### Deeper')).toContain('class="govuk-heading-m"')
+  })
+
+  test('adds a slugified id to headings', () => {
+    expect(render('## Next Steps')).toContain('<h2 class="govuk-heading-l" id="next-steps">')
+  })
+
+  test('slugifies heading text with numbers and punctuation', () => {
+    expect(render('### 1.2 Overview')).toContain('id="1-2-overview"')
   })
 
   test('applies govuk-body to paragraphs', () => {

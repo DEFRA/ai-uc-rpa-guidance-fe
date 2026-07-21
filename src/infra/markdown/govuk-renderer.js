@@ -1,3 +1,5 @@
+import { slugify } from './slugify.js'
+
 const HEADING_CLASSES = {
   1: 'govuk-heading-xl',
   2: 'govuk-heading-l',
@@ -9,6 +11,12 @@ const HEADING_CLASSES = {
 // protocol-relative URL (`//host`). Deliberately does not match `#anchor`
 // fragments or `/relative` paths, so internal links are left untouched.
 const EXTERNAL_HREF = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i
+
+function extractText (tokens) {
+  return (tokens ?? [])
+    .map((t) => t.text ?? (t.tokens ? extractText(t.tokens) : ''))
+    .join('')
+}
 
 /**
  * A `marked` extension whose renderer applies GOV.UK Frontend classes to the
@@ -24,7 +32,8 @@ function govukRenderer () {
     renderer: {
       heading (token) {
         const className = HEADING_CLASSES[token.depth] || 'govuk-heading-s'
-        return `<h${token.depth} class="${className}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`
+        const id = slugify(extractText(token.tokens))
+        return `<h${token.depth} class="${className}" id="${id}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`
       },
 
       paragraph (token) {

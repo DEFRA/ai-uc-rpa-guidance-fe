@@ -48,7 +48,7 @@ describe('#guidanceViewerController', () => {
     // Rendered markdown content
     expect(payload).toContain('Some body text.')
     // Section heading normalised to govuk-heading-m (level-1 heading rendered at h2)
-    expect(payload).toContain('<h3 class="govuk-heading-m">1 Overview</h3>')
+    expect(payload).toMatch(/<h3 class="govuk-heading-m"[^>]*>1 Overview<\/h3>/)
     // Current section highlighted in the ToC
     expect(payload).toContain('aria-current="page"')
     // Next pager link to section 2
@@ -66,7 +66,7 @@ describe('#guidanceViewerController', () => {
     })
 
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-    expect(payload).toContain('<h3 class="govuk-heading-m">1.1 Details</h3>')
+    expect(payload).toMatch(/<h3 class="govuk-heading-m"[^>]*>1\.1 Details<\/h3>/)
   })
 
   test('Should render the document landing page with blurb and full contents', async () => {
