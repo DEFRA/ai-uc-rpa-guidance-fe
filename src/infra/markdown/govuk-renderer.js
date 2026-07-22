@@ -12,7 +12,11 @@ const HEADING_CLASSES = {
 // fragments or `/relative` paths, so internal links are left untouched.
 const EXTERNAL_HREF = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i
 
+// `marked` populates `tokens` on every heading and `text` on every inline token
+// it emits, so these guards only exist to keep the renderer safe if a future
+// version changes token shapes. Unreachable today, hence excluded from coverage.
 function extractText (tokens) {
+  /* v8 ignore next 2 */
   return (tokens ?? [])
     .map((t) => t.text ?? (t.tokens ? extractText(t.tokens) : ''))
     .join('')
@@ -42,6 +46,8 @@ function govukRenderer () {
 
       link (token) {
         const titleAttr = token.title ? ` title="${token.title}"` : ''
+        // `href` is always present on a link token; guard is defensive only.
+        /* v8 ignore next */
         const isExternal = EXTERNAL_HREF.test(token.href ?? '')
         const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
         const externalHint = isExternal
@@ -62,6 +68,8 @@ function govukRenderer () {
       },
 
       image (token) {
+        // `text` is `''` (not nullish) for `![](x.png)`; guard is defensive only.
+        /* v8 ignore next */
         const alt = token.text ?? ''
         return `<img class="guidance-image" src="${token.href}" alt="${alt}" />\n`
       },

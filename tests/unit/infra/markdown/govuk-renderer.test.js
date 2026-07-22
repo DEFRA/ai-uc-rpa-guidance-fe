@@ -13,6 +13,11 @@ describe('#govukRenderer', () => {
     expect(render('### Deeper')).toContain('class="govuk-heading-m"')
   })
 
+  test('falls back to the smallest heading class below depth 4', () => {
+    expect(render('##### Depth five')).toContain('<h5 class="govuk-heading-s"')
+    expect(render('###### Depth six')).toContain('<h6 class="govuk-heading-s"')
+  })
+
   test('adds a slugified id to headings', () => {
     expect(render('## Next Steps')).toContain('<h2 class="govuk-heading-l" id="next-steps">')
   })
@@ -40,6 +45,12 @@ describe('#govukRenderer', () => {
   test('does not open site-relative links in a new tab', () => {
     expect(render('[see section](/guidance-documents/doc-1/sections/1)')).toContain(
       '<a class="govuk-link" href="/guidance-documents/doc-1/sections/1">see section</a>'
+    )
+  })
+
+  test('renders a link title attribute when one is supplied', () => {
+    expect(render('[GOV.UK](https://gov.uk "The title")')).toContain(
+      '<a class="govuk-link" href="https://gov.uk" title="The title" target="_blank" rel="noopener noreferrer">'
     )
   })
 
