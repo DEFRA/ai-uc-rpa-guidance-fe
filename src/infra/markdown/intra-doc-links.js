@@ -17,7 +17,9 @@ function rewriteIntraDocLinks (options) {
 
   return {
     walkTokens (token) {
-      if (token.type !== 'link') return
+      if (token.type !== 'link') {
+        return
+      }
 
       const href = token.href ?? ''
       const stripped = href.startsWith('#') ? href.slice(1) : href
