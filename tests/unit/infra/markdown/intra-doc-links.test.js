@@ -7,7 +7,7 @@ const sections = [
   { number: '1', heading: 'Overview' },
   { number: '1.2', heading: 'Details' },
   { number: '2', heading: 'Next Steps' },
-  { number: '3.1', heading: 'Specific soil erosion status' }
+  { number: '10', heading: 'Case resolution and closure' }
 ]
 
 const render = (markdown, opts = {}) =>
@@ -16,7 +16,7 @@ const render = (markdown, opts = {}) =>
     .render(markdown)
 
 describe('#rewriteIntraDocLinks', () => {
-  describe('section number links (existing behaviour)', () => {
+  describe('section-number links', () => {
     test('rewrites a bare section-number href to the section URL', () => {
       expect(render('[see](1.2)')).toContain(
         'href="/guidance-documents/doc-1/sections/1.2"'
@@ -29,43 +29,21 @@ describe('#rewriteIntraDocLinks', () => {
       )
     })
 
+    test('rewrites a backend-resolved cross-reference (#10) to its section page', () => {
+      // The backend resolves a Word bookmark cross-reference to `#10`; the
+      // viewer turns that into the section link with no slug guessing.
+      expect(render('[Case resolution and closure](#10)')).toContain(
+        'href="/guidance-documents/doc-1/sections/10"'
+      )
+    })
+
     test('leaves references to unknown sections untouched', () => {
       expect(render('[ghost](9.9)')).toContain('href="9.9"')
     })
-  })
 
-  describe('heading slug links', () => {
-    test('rewrites a heading-slug fragment to the section page with fragment', () => {
-      // heading "Next Steps" in section "2" → rendered id is "2-next-steps"
-      expect(render('[see](#next-steps)')).toContain(
-        'href="/guidance-documents/doc-1/sections/2#2-next-steps"'
-      )
-    })
-
-    test('normalises the incoming fragment before matching (Word-style underscores)', () => {
-      // _Next_Steps slugifies to "next-steps" → matches "Next Steps"
-      expect(render('[see](#_Next_Steps)')).toContain(
-        'href="/guidance-documents/doc-1/sections/2#2-next-steps"'
-      )
-    })
-
-    test('rewrites a match on the current section to a same-page fragment', () => {
-      // current section is "2" (Next Steps) → same-page scroll
-      expect(render('[see](#next-steps)', { currentSectionNumber: '2' })).toContain(
-        'href="#2-next-steps"'
-      )
-    })
-
-    test('prefix-matches a truncated Word bookmark to the best-matching section', () => {
-      // #_Specific_soil_erosion → "specific-soil-erosion" prefix-matches
-      // "specific-soil-erosion-status" (section 3.1)
-      expect(render('[see](#_Specific_soil_erosion)')).toContain(
-        'href="/guidance-documents/doc-1/sections/3.1#3-1-specific-soil-erosion-status"'
-      )
-    })
-
-    test('leaves unrecognised fragments untouched (same-page sub-heading)', () => {
-      expect(render('[see](#some-sub-heading)')).toContain('href="#some-sub-heading"')
+    test('leaves an unresolved bookmark anchor untouched', () => {
+      // Anything the backend could not resolve stays a raw anchor.
+      expect(render('[see](#_Some_Bookmark)')).toContain('href="#_Some_Bookmark"')
     })
   })
 

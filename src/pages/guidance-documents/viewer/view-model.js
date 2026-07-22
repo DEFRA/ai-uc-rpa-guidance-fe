@@ -95,7 +95,7 @@ function sectionViewModel (params) {
   const contentHtml = createMarkdown()
     .use(govukRenderer())
     .use(shiftHeadings({ by: headingShift }))
-    .use(rewriteIntraDocLinks({ documentId, sections, currentSectionNumber: sectionNumber }))
+    .use(rewriteIntraDocLinks({ documentId, sections }))
     .use(rewriteImagePaths({ documentId }))
     .render(markdown)
 
