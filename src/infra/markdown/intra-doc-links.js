@@ -1,24 +1,19 @@
-const SECTION_NUMBER = /^#?(\d+(?:\.\d+)*)$/
-
 /**
- * A `marked` extension that rewrites intra-document cross-references so they
- * point at the correct section page within the viewer.
+ * A marked extension that rewrites intra-document cross-references
+ * to point at the correct section page.
  *
- * The backend does not yet expose explicit link targets (the manifest `links`
- * field is currently empty), so resolution is heuristic: a link whose href is
- * a bare section number — optionally anchor-prefixed, e.g. `1.2` or `#1.2` —
- * is treated as a reference to that section, provided the section exists in
- * the manifest. External and unrecognised links are left untouched.
- *
- * This resolver is intentionally isolated so it can be tightened once the
- * backend renders explicit anchors/targets.
- *
- * @param {{ documentId: string, sections: { number: string }[] }} options
- * @returns {{ walkTokens: (token: object) => void }}
+ * Cross-references are resolved to section numbers at ingestion time in the
+ * backend, so a link arrives here as either a bare section number (`1.2`) or an
+ * anchored one (`#1.2`). Both are turned into a section-page URL; anything the
+ * backend could not resolve is left untouched.
+ * @param {{
+ *   documentId: string,
+ *   sections: { number: string, heading: string }[]
+ * }} options
  */
 function rewriteIntraDocLinks (options) {
   const { documentId, sections = [] } = options
-  const known = new Set(sections.map((section) => section.number))
+  const knownNumbers = new Set(sections.map((s) => s.number))
 
   return {
     walkTokens (token) {
@@ -26,13 +21,12 @@ function rewriteIntraDocLinks (options) {
         return
       }
 
-      const match = SECTION_NUMBER.exec(token.href ?? '')
-      if (!match || !known.has(match[1])) {
-        return
-      }
+      const href = token.href ?? ''
+      const stripped = href.startsWith('#') ? href.slice(1) : href
 
-      token.href =
-        `/guidance-documents/${documentId}/sections/${encodeURIComponent(match[1])}`
+      if (knownNumbers.has(stripped)) {
+        token.href = `/guidance-documents/${documentId}/sections/${encodeURIComponent(stripped)}`
+      }
     }
   }
 }
