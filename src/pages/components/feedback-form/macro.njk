@@ -69,6 +69,24 @@
 
     {% else %}
 
+      <details class="govuk-details govuk-!-margin-bottom-4">
+        <summary class="govuk-details__summary">
+          <span class="govuk-details__summary-text">What the verdicts mean</span>
+        </summary>
+        <div class="govuk-details__text">
+          <dl class="govuk-body">
+            <dt class="govuk-!-font-weight-bold">To fix</dt>
+            <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-3">Select this if the finding identifies a genuine issue and to request it be addressed before publishing.</dd>
+
+            <dt class="govuk-!-font-weight-bold">Won't fix</dt>
+            <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-3">Select this if the finding identifies an issue but for some reason the content can still be accepted as it is.</dd>
+
+            <dt class="govuk-!-font-weight-bold">False positive</dt>
+            <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-0">Select this if the finding is wrong, or its severity is wrong.</dd>
+          </dl>
+        </div>
+      </details>
+
       <form method="post" action="{{ params.actionUrl }}" novalidate>
         <input type="hidden" name="crumb" value="{{ crumb }}">
 
