@@ -6,6 +6,24 @@ FROM defradigital/node-development:${PARENT_VERSION} AS development
 ARG PARENT_VERSION
 LABEL uk.gov.defra.ffc.parent-image=defradigital/node-development:${PARENT_VERSION}
 
+USER root
+
+# Optionally trust a corporate/TLS-inspecting proxy CA. `ca-bundle` is a named
+# build context that defaults to an empty directory, so this is a no-op unless
+# CA_BUNDLE_DIR points at a directory of PEM certificates. A build context is
+# used rather than a build secret because BuildKit hashes context contents:
+# the layer rebuilds when — and only when — the certificates change.
+# Node ignores the system trust store, so the certificates are appended to both
+# it and the file the base image already points NODE_EXTRA_CA_CERTS at.
+COPY --from=ca-bundle . /tmp/ca-bundle/
+RUN find /tmp/ca-bundle -type f \( -name '*.crt' -o -name '*.pem' \) -exec cat {} + \
+      | awk '/BEGIN CERTIFICATE/{b=""} {b=b $0 ORS} /END CERTIFICATE/{if (!seen[b]++) printf "%s", b}' \
+      | tee -a /usr/local/share/ca-certificates/internal-ca.crt \
+      >> /etc/ssl/certs/ca-certificates.crt && \
+    rm -rf /tmp/ca-bundle
+
+USER node
+
 ENV TZ="Europe/London"
 
 ARG PORT
