@@ -2,17 +2,22 @@ ARG PARENT_VERSION=3.0.10-node24.16.0
 ARG PORT=3000
 ARG PORT_DEBUG=9229
 
+# Overrideable scratch context to allow the inclusion of any custom root CAs we
+# need to trust, left empty here by default.
+FROM scratch AS ca-bundle
+
 FROM defradigital/node-development:${PARENT_VERSION} AS development
 ARG PARENT_VERSION
 LABEL uk.gov.defra.ffc.parent-image=defradigital/node-development:${PARENT_VERSION}
 
 USER root
 
-# Optionally trust a corporate/TLS-inspecting proxy CA. `ca-bundle` is a named
-# build context that defaults to an empty directory, so this is a no-op unless
-# CA_BUNDLE_DIR points at a directory of PEM certificates. A build context is
-# used rather than a build secret because BuildKit hashes context contents:
-# the layer rebuilds when — and only when — the certificates change.
+# Optionally trust a corporate/TLS-inspecting proxy CA. `ca-bundle` is empty
+# unless a build context overrides it with a directory of PEM certificates (the
+# orchestrator's compose files pass CA_BUNDLE_DIR), so this is a no-op by
+# default. A build context is used rather than a build secret because BuildKit
+# hashes context contents: the layer rebuilds when — and only when — the
+# certificates change.
 # Node ignores the system trust store, so the certificates are appended to both
 # it and the file the base image already points NODE_EXTRA_CA_CERTS at.
 COPY --from=ca-bundle . /tmp/ca-bundle/
