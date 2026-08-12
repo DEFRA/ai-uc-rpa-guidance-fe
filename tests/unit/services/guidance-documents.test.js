@@ -142,6 +142,51 @@ describe('guidance-documents service', () => {
     })
   })
 
+  describe('#updateDocumentSection', () => {
+    const edit = { heading: 'Email — case note template', markdown: 'SBI is correct.' }
+
+    test('Should report success on 204', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: true, status: 204, data: null })
+
+      const outcome = await guidanceService.updateDocumentSection('doc-1', '7.2', edit)
+
+      expect(outcome.succeeded).toBe(true)
+      expect(outcome.reason).toBeNull()
+    })
+
+    test('Should pass the edit through to the api layer', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: true, status: 204, data: null })
+
+      await guidanceService.updateDocumentSection('doc-1', '7.2', edit)
+
+      expect(guidanceApi.updateDocumentSection).toHaveBeenCalledWith('doc-1', '7.2', edit)
+    })
+
+    test('Should report not_found on 404', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      const outcome = await guidanceService.updateDocumentSection('doc-1', '99', edit)
+
+      expect(outcome.succeeded).toBe(false)
+      expect(outcome.reason).toBe('not_found')
+    })
+
+    test('Should report invalid on 422', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: false, status: 422, data: null })
+
+      const outcome = await guidanceService.updateDocumentSection('doc-1', '1', { heading: '', markdown: '' })
+
+      expect(outcome.succeeded).toBe(false)
+      expect(outcome.reason).toBe('invalid')
+    })
+
+    test('Should propagate unexpected errors', async () => {
+      guidanceApi.updateDocumentSection.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(guidanceService.updateDocumentSection('doc-1', '1', edit)).rejects.toThrow('Network error')
+    })
+  })
+
   describe('#getDocumentImage', () => {
     test('Should return buffer when image is found', async () => {
       const buffer = Buffer.from([0x89, 0x50])

@@ -1,0 +1,113 @@
+@use 'govuk-frontend' as *;
+
+// ProseMirror's base rules, copied from prosemirror-view/style/prosemirror.css
+// rather than imported: importing CSS from the JS entry would make Vite emit a
+// second stylesheet, and the manifest's `css` array is not exposed by the
+// getAssetPath helper.
+//
+// The class names and element-qualified selectors below are the library's own
+// and cannot be renamed, so the GDS naming rules are switched off for this block
+// only.
+// stylelint-disable scss/selector-class-pattern, selector-no-qualifying-type
+.ProseMirror {
+  position: relative;
+  overflow-wrap: break-word;
+  white-space: break-spaces;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0;
+}
+
+.ProseMirror pre {
+  white-space: pre-wrap;
+}
+
+.ProseMirror li {
+  position: relative;
+}
+
+.ProseMirror-hideselection *::selection {
+  background: transparent;
+}
+
+.ProseMirror-hideselection {
+  caret-color: transparent;
+}
+
+.ProseMirror [draggable][contenteditable='false'] {
+  user-select: text;
+}
+
+.ProseMirror-selectednode {
+  outline: 2px solid $govuk-focus-colour;
+}
+
+li.ProseMirror-selectednode {
+  outline: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -2px -2px -2px -32px;
+    border: 2px solid $govuk-focus-colour;
+    pointer-events: none;
+  }
+}
+
+// Overriding the library's own !important declarations requires !important.
+img.ProseMirror-separator {
+  display: inline !important; // stylelint-disable-line declaration-no-important
+  border: none !important; // stylelint-disable-line declaration-no-important
+  margin: 0 !important; // stylelint-disable-line declaration-no-important
+}
+// stylelint-enable scss/selector-class-pattern, selector-no-qualifying-type
+
+// The editor itself, styled to sit in a GOV.UK form.
+.app-editor {
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  margin-bottom: govuk-spacing(2);
+}
+
+.app-editor__button {
+  margin-bottom: 0;
+}
+
+.app-editor__content {
+  padding: govuk-spacing(2);
+  border: 2px solid $govuk-input-border-colour;
+  background-color: govuk-colour('white');
+
+  // The editable region suppresses its own outline, so the container shows focus.
+  &:focus-within {
+    outline: 3px solid $govuk-focus-colour;
+    outline-offset: 0;
+  }
+
+  .ProseMirror { // stylelint-disable-line scss/selector-class-pattern
+    @include govuk-font($size: 19);
+
+    min-height: 20em;
+    outline: none;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  table {
+    width: 100%;
+    margin-bottom: govuk-spacing(4);
+    border-collapse: collapse;
+
+    td,
+    th {
+      padding: govuk-spacing(1);
+      border: 1px solid $govuk-border-colour;
+    }
+  }
+}

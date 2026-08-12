@@ -2,6 +2,7 @@ import { createMarkdown } from '../../../infra/markdown/markdown.js'
 import { govukRenderer } from '../../../infra/markdown/govuk-renderer.js'
 import { rewriteIntraDocLinks } from '../../../infra/markdown/intra-doc-links.js'
 import { rewriteImagePaths } from '../../../infra/markdown/rewrite-image-paths.js'
+import { sanitiseGuidanceHtml } from '../../../infra/markdown/sanitise.js'
 import { shiftHeadings } from '../../../infra/markdown/shift-headings.js'
 import { guidanceDocumentsBreadcrumbs } from '../../common/breadcrumbs.js'
 
@@ -92,12 +93,16 @@ function sectionViewModel (params) {
     ? (current.level + 1) - SECTION_HEADING_DEPTH
     : 0
 
-  const contentHtml = createMarkdown()
-    .use(govukRenderer())
-    .use(shiftHeadings({ by: headingShift }))
-    .use(rewriteIntraDocLinks({ documentId, sections }))
-    .use(rewriteImagePaths({ documentId }))
-    .render(markdown)
+  // Sanitised last: the guidance is imported from Word and editable by hand, and
+  // marked passes raw HTML through, so the rendered output is untrusted.
+  const contentHtml = sanitiseGuidanceHtml(
+    createMarkdown()
+      .use(govukRenderer())
+      .use(shiftHeadings({ by: headingShift }))
+      .use(rewriteIntraDocLinks({ documentId, sections }))
+      .use(rewriteImagePaths({ documentId }))
+      .render(markdown)
+  )
 
   const toLink = (section) =>
     section && {
@@ -110,12 +115,15 @@ function sectionViewModel (params) {
     ? `${current.number} ${current.heading}`
     : manifest.title
 
+  const sectionHref = `/guidance-documents/${documentId}/sections/${encodeURIComponent(sectionNumber)}`
+
   return {
     pageTitle: `${sectionTitle} - ${manifest.title}`,
     page: 'guidance-documents',
     documentTitle: manifest.title,
     sectionTitle,
     contentHtml,
+    editHref: current ? `${sectionHref}/edit` : null,
     toc: buildTocTree(sections, documentId, sectionNumber),
     previous: toLink(sections[index - 1]),
     next: toLink(sections[index + 1]),

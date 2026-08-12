@@ -1,5 +1,6 @@
 {% extends "common/layout.njk" %}
 {% import "components/toc-nav/macro.njk" as tocNav %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% set page = 'guidance-documents' %}
 
@@ -18,6 +19,14 @@
           <div class="app-guidance-content">
             {{ contentHtml | safe }}
           </div>
+
+          {% if editHref %}
+            {{ govukButton({
+              text: "Edit this section",
+              href: editHref,
+              classes: "govuk-button--secondary"
+            }) }}
+          {% endif %}
 
           {% if previous or next %}
             <nav class="govuk-pagination govuk-pagination--block" aria-label="Section navigation">

@@ -2,10 +2,25 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 import * as confirmationController from './upload/confirmation/controller.js'
+import * as editController from './edit/controller.js'
 import * as listController from './list/controller.js'
 import * as uploadController from './upload/controller.js'
 import * as uploadFileController from './upload/file/controller.js'
 import * as viewerController from './viewer/controller.js'
+
+const sectionParams = Joi.object({
+  documentId: Joi.string().required(),
+  sectionNumber: Joi.string().pattern(/^\d+(\.\d+)*$/).required()
+})
+
+const sectionNotFound = (_request, _h, err) => {
+  throw Boom.notFound('Guidance section not found', err)
+}
+
+const editPayload = Joi.object({
+  heading: Joi.string().trim().max(500).required(),
+  markdown: Joi.string().allow('').max(1000000).required()
+})
 
 const routes = [
   {
@@ -40,13 +55,31 @@ const routes = [
     handler: viewerController.getGuidanceViewerSection,
     options: {
       validate: {
-        params: Joi.object({
-          documentId: Joi.string().required(),
-          sectionNumber: Joi.string().pattern(/^\d+(\.\d+)*$/).required()
-        }),
-        failAction: (_request, _h, err) => {
-          throw Boom.notFound('Guidance section not found', err)
-        }
+        params: sectionParams,
+        failAction: sectionNotFound
+      }
+    }
+  },
+  {
+    method: 'GET',
+    path: '/guidance-documents/{documentId}/sections/{sectionNumber}/edit',
+    handler: editController.getGuidanceSectionEdit,
+    options: {
+      validate: {
+        params: sectionParams,
+        failAction: sectionNotFound
+      }
+    }
+  },
+  {
+    method: 'POST',
+    path: '/guidance-documents/{documentId}/sections/{sectionNumber}/edit',
+    handler: editController.postGuidanceSectionEdit,
+    options: {
+      validate: {
+        params: sectionParams,
+        payload: editPayload,
+        failAction: editController.guidanceSectionEditFailAction
       }
     }
   },

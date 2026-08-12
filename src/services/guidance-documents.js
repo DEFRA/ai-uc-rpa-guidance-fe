@@ -1,5 +1,7 @@
+import { constants as statusCodes } from 'node:http2'
+
 import * as guidanceApi from '../infra/api/guidance-api.js'
-import { FetchDocumentOutcome } from '../models/guidance-documents.js'
+import { FetchDocumentOutcome, UpdateSectionOutcome } from '../models/guidance-documents.js'
 
 /**
  * @param {number} [page=1]
@@ -66,6 +68,28 @@ async function getDocumentSection (documentId, sectionNumber) {
 }
 
 /**
+ * Save an editor's correction to a single document section.
+ *
+ * The section number is not editable: it identifies the section being replaced.
+ *
+ * @param {string} documentId
+ * @param {string} sectionNumber
+ * @param {{ heading: string, markdown: string }} edit
+ * @returns {Promise<UpdateSectionOutcome>}
+ */
+async function updateDocumentSection (documentId, sectionNumber, edit) {
+  const res = await guidanceApi.updateDocumentSection(documentId, sectionNumber, edit)
+
+  if (res.ok) {
+    return UpdateSectionOutcome.success()
+  }
+
+  return res.status === statusCodes.HTTP_STATUS_NOT_FOUND
+    ? UpdateSectionOutcome.notFound()
+    : UpdateSectionOutcome.invalid()
+}
+
+/**
  * Fetch the raw bytes for an image extracted from a guidance document.
  *
  * @param {string} documentId
@@ -84,5 +108,6 @@ export {
   fetchDocument,
   getDocumentManifest,
   getDocumentSection,
+  updateDocumentSection,
   getDocumentImage
 }
