@@ -142,6 +142,96 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#updateDocumentSection', () => {
+    test('Should PUT the heading and markdown as JSON', async () => {
+      fetchMock.mockResponseOnce(null, { status: 204 })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '7.2', {
+        heading: 'Email — case note template',
+        markdown: 'SBI is correct.'
+      })
+
+      expect(res.ok).toBe(true)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/sections/7.2',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            heading: 'Email — case note template',
+            markdown: 'SBI is correct.'
+          })
+        })
+      )
+    })
+
+    test('Should not attempt to parse the empty 204 body', async () => {
+      fetchMock.mockResponseOnce(null, { status: 204 })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '1', {
+        heading: 'Overview',
+        markdown: 'Text.'
+      })
+
+      expect(res.data).toBeNull()
+    })
+
+    test('Should encode the section number in the path', async () => {
+      fetchMock.mockResponseOnce(null, { status: 204 })
+
+      await guidanceApi.updateDocumentSection('doc-1', '1.2.3', {
+        heading: 'Deep',
+        markdown: 'Text.'
+      })
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/sections/1.2.3',
+        expect.objectContaining({ method: 'PUT' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '99', {
+        heading: 'Missing',
+        markdown: 'Text.'
+      })
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+
+    test('Should return { ok: false } on 422 without throwing', async () => {
+      fetchMock.mockResponseOnce('', {
+        status: 422,
+        statusText: 'Unprocessable Content'
+      })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '1', {
+        heading: '',
+        markdown: 'Text.'
+      })
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(422)
+    })
+
+    test('Should throw on unexpected non-OK response', async () => {
+      fetchMock.mockResponseOnce('', {
+        status: 503,
+        statusText: 'Service Unavailable'
+      })
+
+      await expect(
+        guidanceApi.updateDocumentSection('doc-1', '1', {
+          heading: 'Overview',
+          markdown: 'Text.'
+        })
+      ).rejects.toMatchObject({ statusCode: 503 })
+    })
+  })
+
   describe('#getDocumentImage', () => {
     test('Should GET image bytes as a Buffer', async () => {
       const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47])

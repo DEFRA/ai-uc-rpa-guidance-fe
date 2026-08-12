@@ -133,6 +133,51 @@ describe('#guidanceViewerController', () => {
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
   })
 
+  test('Should not render a script smuggled into section markdown', async () => {
+    guidanceDocumentsService.getDocumentManifest.mockResolvedValueOnce(MANIFEST)
+    guidanceDocumentsService.getDocumentSection.mockResolvedValueOnce(
+      '## 1 Overview\n\nBefore.<script>alert(1)</script>After.\n'
+    )
+
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/guidance-documents/doc-1/sections/1'
+    })
+
+    expect(payload).not.toContain('<script>alert(1)</script>')
+    expect(payload).not.toContain('alert(1)')
+    // The surrounding legitimate content still renders.
+    expect(payload).toContain('Before.')
+    expect(payload).toContain('After.')
+  })
+
+  test('Should not render an onerror handler smuggled into section markdown', async () => {
+    guidanceDocumentsService.getDocumentManifest.mockResolvedValueOnce(MANIFEST)
+    guidanceDocumentsService.getDocumentSection.mockResolvedValueOnce(
+      '## 1 Overview\n\n<img src="x" onerror="alert(1)">\n'
+    )
+
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/guidance-documents/doc-1/sections/1'
+    })
+
+    expect(payload).not.toContain('onerror')
+  })
+
+  test('Should offer a link to edit the section being viewed', async () => {
+    guidanceDocumentsService.getDocumentManifest.mockResolvedValueOnce(MANIFEST)
+    guidanceDocumentsService.getDocumentSection.mockResolvedValueOnce('## 1.1 Details\n\nBody.')
+
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/guidance-documents/doc-1/sections/1.1'
+    })
+
+    expect(payload).toContain('href="/guidance-documents/doc-1/sections/1.1/edit"')
+    expect(payload).toContain('Edit this section')
+  })
+
   describe('#getGuidanceDocumentImage', () => {
     const VALID_DOC_ID = '12345678-1234-5678-1234-567812345678'
 

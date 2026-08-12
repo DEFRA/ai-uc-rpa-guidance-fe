@@ -7,7 +7,9 @@ const baseUrl = config.get('guidanceApi.url')
 const responseParsers = {
   json: (res) => res.json(),
   text: (res) => res.text(),
-  arrayBuffer: async (res) => Buffer.from(await res.arrayBuffer())
+  arrayBuffer: async (res) => Buffer.from(await res.arrayBuffer()),
+  // For 204 responses, which have no body to parse.
+  none: () => null
 }
 
 async function request (path, { method = 'GET', body, expected = [], responseType = 'json' } = {}) {
@@ -58,6 +60,21 @@ async function getDocumentSection (id, sectionNumber) {
     {
       responseType: 'text',
       expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+    }
+  )
+}
+
+async function updateDocumentSection (id, sectionNumber, { heading, markdown }) {
+  return request(
+    `/guidance/documents/${id}/sections/${encodeURIComponent(sectionNumber)}`,
+    {
+      method: 'PUT',
+      body: { heading, markdown },
+      responseType: 'none',
+      expected: [
+        http2StatusCodes.HTTP_STATUS_NOT_FOUND,
+        http2StatusCodes.HTTP_STATUS_UNPROCESSABLE_ENTITY
+      ]
     }
   )
 }
@@ -125,6 +142,7 @@ export {
   getDocument,
   getDocumentManifest,
   getDocumentSection,
+  updateDocumentSection,
   getDocumentImage,
   initiateUpload,
   startAnalysis,
