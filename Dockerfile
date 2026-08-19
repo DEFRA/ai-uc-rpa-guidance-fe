@@ -2,9 +2,35 @@ ARG PARENT_VERSION=3.0.10-node24.16.0
 ARG PORT=3000
 ARG PORT_DEBUG=9229
 
+# Overrideable scratch context to allow the inclusion of any custom root CAs we
+# need to trust, left empty here by default.
+FROM scratch AS ca-bundle
+
 FROM defradigital/node-development:${PARENT_VERSION} AS development
 ARG PARENT_VERSION
 LABEL uk.gov.defra.ffc.parent-image=defradigital/node-development:${PARENT_VERSION}
+
+USER root
+
+# Optionally trust a corporate/TLS-inspecting proxy CA. `ca-bundle` is empty
+# unless a build context overrides it with a directory of *.crt certificates
+# (the orchestrator's compose files pass CA_BUNDLE_DIR), so this is a no-op by
+# default. A build context is used rather than a build secret because BuildKit
+# hashes context contents: the layer rebuilds when — and only when — the
+# certificates change. Only *.crt files are copied, so nothing else in the
+# directory (e.g. a private key) can end up in an image layer; when nothing
+# matches, COPY creates no directory, hence the mkdir.
+# Node ignores the system trust store, so the certificates are appended to both
+# it and the file the base image already points NODE_EXTRA_CA_CERTS at.
+COPY --from=ca-bundle *.crt /tmp/ca-bundle/
+RUN mkdir -p /tmp/ca-bundle && \
+    find /tmp/ca-bundle -type f -name '*.crt' -exec cat {} + \
+      | awk '/BEGIN CERTIFICATE/{b=""} {b=b $0 ORS} /END CERTIFICATE/{if (!seen[b]++) printf "%s", b}' \
+      | tee -a /usr/local/share/ca-certificates/internal-ca.crt \
+      >> /etc/ssl/certs/ca-certificates.crt && \
+    rm -rf /tmp/ca-bundle
+
+USER node
 
 ENV TZ="Europe/London"
 
