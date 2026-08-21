@@ -54,6 +54,45 @@ describe('#guidanceDocumentsListController', () => {
     expect(payload).toContain('/guidance-documents/upload')
   })
 
+  test('Should offer an Edit link for a complete document', async () => {
+    mockListDocuments.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        items: [{ id: 'doc-1', title: 'My Guidance', status: 'complete' }],
+        total: 1,
+        page: 1,
+        pageSize: 10
+      }
+    })
+
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/guidance-documents'
+    })
+
+    expect(payload).toContain('href="/guidance-documents/doc-1/edit"')
+    expect(payload).toContain('Edit')
+  })
+
+  test('Should not offer an Edit link before processing completes', async () => {
+    mockListDocuments.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        items: [{ id: 'doc-2', title: 'Pending Guidance', status: 'processing' }],
+        total: 1,
+        page: 1,
+        pageSize: 10
+      }
+    })
+
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/guidance-documents'
+    })
+
+    expect(payload).not.toContain('/guidance-documents/doc-2/edit')
+  })
+
   test('Should render error page when the API is unavailable', async () => {
     mockListDocuments.mockRejectedValueOnce(new Error('API down'))
 

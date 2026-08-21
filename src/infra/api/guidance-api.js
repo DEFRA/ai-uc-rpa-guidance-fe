@@ -54,6 +54,13 @@ async function getDocumentManifest (id) {
   })
 }
 
+async function getDocumentContent (id) {
+  return request(`/guidance/documents/${id}/content`, {
+    responseType: 'text',
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
 async function getDocumentSection (id, sectionNumber) {
   return request(
     `/guidance/documents/${id}/sections/${encodeURIComponent(sectionNumber)}`,
@@ -141,6 +148,7 @@ export {
   listDocuments,
   getDocument,
   getDocumentManifest,
+  getDocumentContent,
   getDocumentSection,
   updateDocumentSection,
   getDocumentImage,

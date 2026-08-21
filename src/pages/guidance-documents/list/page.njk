@@ -1,5 +1,7 @@
 {% extends "common/layout.njk" %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
 {% set pageTitle = 'Guidance documents' %}
 {% set page = 'guidance-documents' %}
 
@@ -25,6 +27,11 @@
                     <a class="govuk-link app-guidance-doc-link" href="/guidance-documents/{{ doc.id }}/view">
                       {{ doc.title or doc.filename or 'Untitled' }}
                     </a>
+                    {{ govukButton({
+                      text: "Edit",
+                      href: "/guidance-documents/" + doc.id + "/edit",
+                      classes: "govuk-button--secondary govuk-!-margin-bottom-0 govuk-!-margin-left-2"
+                    }) }}
                   {% else %}
                     {{ doc.title or doc.filename or 'Untitled' }}
                   {% endif %}

@@ -99,6 +99,10 @@ img.ProseMirror-separator {
     max-width: 100%;
   }
 
+  mark {
+    background-color: govuk-colour('yellow');
+  }
+
   table {
     width: 100%;
     margin-bottom: govuk-spacing(4);
@@ -110,4 +114,105 @@ img.ProseMirror-separator {
       border: 1px solid $govuk-border-colour;
     }
   }
+}
+
+// The whole-document editor. The pane is capped and scrolls internally, so the
+// page itself never grows and the toolbar stays on screen however long the
+// document is; `position: sticky` covers short viewports as well.
+.app-document-editor {
+  .app-editor__toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-bottom: 0;
+    padding: govuk-spacing(2);
+    background-color: govuk-colour('white');
+    border: 1px solid $govuk-border-colour;
+    border-bottom: 0;
+  }
+
+  .app-editor__content {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  // The container owns the height here, so the editable region must not force
+  // its own minimum on top of it.
+  .ProseMirror { // stylelint-disable-line scss/selector-class-pattern
+    min-height: 0;
+  }
+}
+
+// Toolbar buttons are grouped so a long toolbar wraps into meaningful clusters
+// rather than an undifferentiated run of buttons.
+.app-editor__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(1);
+  align-items: center;
+  padding-right: govuk-spacing(2);
+  border-right: 1px solid $govuk-border-colour;
+
+  &:last-child {
+    padding-right: 0;
+    border-right: 0;
+  }
+}
+
+// GOV.UK buttons at full size are far too heavy for a toolbar this long.
+.app-editor__button--compact {
+  @include govuk-font($size: 16);
+
+  margin-bottom: 0;
+  padding: govuk-spacing(1) govuk-spacing(2);
+}
+
+// Colour swatches carry their colour as a class rather than an inline `style`
+// attribute: `style-src 'self'` has no 'unsafe-inline', so an inline style
+// would be dropped.
+.app-editor__swatch {
+  width: 30px;
+  min-width: 0;
+  height: 30px;
+  padding: 0;
+  border: 1px solid $govuk-border-colour;
+  box-shadow: none;
+}
+
+.app-editor__swatch--red {
+  background-color: govuk-colour('red');
+}
+
+.app-editor__swatch--blue {
+  background-color: govuk-colour('blue');
+}
+
+.app-editor__swatch--green {
+  background-color: govuk-colour('green');
+}
+
+.app-editor__swatch--black {
+  background-color: govuk-colour('black');
+}
+
+.app-editor__swatch--yellow {
+  background-color: govuk-colour('yellow');
+}
+
+// Text colour is applied by class rather than by the inline style the TipTap
+// extension emits, because `style-src` carries no 'unsafe-inline'.
+.app-editor__text--red {
+  color: govuk-colour('red');
+}
+
+.app-editor__text--blue {
+  color: govuk-colour('blue');
+}
+
+.app-editor__text--green {
+  color: govuk-colour('green');
+}
+
+.app-editor__text--black {
+  color: govuk-colour('black');
 }
