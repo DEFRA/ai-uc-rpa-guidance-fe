@@ -61,4 +61,30 @@ function splitSectionMarkdown (markdown, sectionNumber) {
   }
 }
 
-export { splitSectionMarkdown }
+/**
+ * Split a stored document file into its editable title and body.
+ *
+ * The whole-document file opens with "# {title}" (see the backend's
+ * `to_markdown`). Unlike a section heading there is no number to strip: a
+ * document title is whatever the author wrote.
+ *
+ * @param {string} markdown The raw document file as stored.
+ * @returns {{ title: string|null, body: string }} `title` is null when the file
+ *   has no heading line, leaving the caller to fall back to the manifest.
+ */
+function splitDocumentMarkdown (markdown) {
+  const normalised = markdown.replace(/\r\n?/g, '\n')
+  const [firstLine, ...remainingLines] = normalised.split('\n')
+  const headingLine = HEADING_LINE.exec(firstLine)
+
+  if (!headingLine) {
+    return { title: null, body: trimLayoutWhitespace(normalised) }
+  }
+
+  return {
+    title: trimLayoutWhitespace(headingLine[1]),
+    body: trimLayoutWhitespace(remainingLines.join('\n'))
+  }
+}
+
+export { splitSectionMarkdown, splitDocumentMarkdown }

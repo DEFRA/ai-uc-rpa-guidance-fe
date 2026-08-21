@@ -1,0 +1,68 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+
+{% set page = 'guidance-documents' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <h1 class="govuk-heading-l">Edit this document</h1>
+
+      {{ govukInsetText({
+        text: "This is a proof of concept. Changes made here are not saved."
+      }) }}
+
+      <form method="post" action="{{ formAction }}">
+        {{ govukInput({
+          id: "title",
+          name: "title",
+          value: title,
+          label: {
+            text: "Document title",
+            classes: "govuk-label--s"
+          },
+          hint: {
+            text: "The title is edited separately from the body below."
+          }
+        }) }}
+
+        {{ govukTextarea({
+          id: "markdown",
+          name: "markdown",
+          value: bodyMarkdown,
+          rows: 20,
+          label: {
+            text: "Content",
+            classes: "govuk-label--s"
+          },
+          hint: {
+            text: "The whole document, excluding the title."
+          },
+          formGroup: {
+            classes: "app-document-editor"
+          },
+          attributes: {
+            "data-module": "guidance-editor",
+            "data-document-id": documentId,
+            "data-editor-toolbar": "document"
+          }
+        }) }}
+
+        <div class="govuk-button-group">
+          {{ govukButton({ text: "Save document" }) }}
+          <a class="govuk-link" href="{{ cancelHref }}">Cancel</a>
+        </div>
+      </form>
+
+    </main>
+  </div>
+{% endblock %}
+
+{% block pageScripts %}
+  <script type="module" src="{{ getAssetPath('src/client/javascripts/guidance-editor.js') }}"></script>
+{% endblock %}

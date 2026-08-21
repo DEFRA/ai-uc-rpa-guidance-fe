@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 import * as confirmationController from './upload/confirmation/controller.js'
+import * as documentEditController from './document-edit/controller.js'
 import * as editController from './edit/controller.js'
 import * as listController from './list/controller.js'
 import * as uploadController from './upload/controller.js'
@@ -16,6 +17,23 @@ const sectionParams = Joi.object({
 const sectionNotFound = (_request, _h, err) => {
   throw Boom.notFound('Guidance section not found', err)
 }
+
+const documentParams = Joi.object({
+  documentId: Joi.string().required()
+})
+
+const documentNotFound = (_request, _h, err) => {
+  throw Boom.notFound('Guidance document not found', err)
+}
+
+// A whole document is far larger than a single section, and hapi's default
+// payload limit of 1 MiB would reject it outright.
+const DOCUMENT_PAYLOAD_MAX_BYTES = 10485760
+
+const documentEditPayload = Joi.object({
+  title: Joi.string().trim().max(500).required(),
+  markdown: Joi.string().allow('').max(10000000).required()
+})
 
 const editPayload = Joi.object({
   heading: Joi.string().trim().max(500).required(),
@@ -80,6 +98,30 @@ const routes = [
         params: sectionParams,
         payload: editPayload,
         failAction: editController.guidanceSectionEditFailAction
+      }
+    }
+  },
+  {
+    method: 'GET',
+    path: '/guidance-documents/{documentId}/edit',
+    handler: documentEditController.getGuidanceDocumentEdit,
+    options: {
+      validate: {
+        params: documentParams,
+        failAction: documentNotFound
+      }
+    }
+  },
+  {
+    method: 'POST',
+    path: '/guidance-documents/{documentId}/edit',
+    handler: documentEditController.postGuidanceDocumentEdit,
+    options: {
+      payload: { maxBytes: DOCUMENT_PAYLOAD_MAX_BYTES },
+      validate: {
+        params: documentParams,
+        payload: documentEditPayload,
+        failAction: documentNotFound
       }
     }
   },

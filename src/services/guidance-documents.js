@@ -56,6 +56,17 @@ async function getDocumentManifest (documentId) {
 }
 
 /**
+ * Fetch the rendered Markdown for a whole document.
+ *
+ * @param {string} documentId
+ * @returns {Promise<string|null>} The document Markdown, or null if not found.
+ */
+async function getDocumentContent (documentId) {
+  const res = await guidanceApi.getDocumentContent(documentId)
+  return res.ok ? res.data : null
+}
+
+/**
  * Fetch the rendered Markdown for a single document section.
  *
  * @param {string} documentId
@@ -107,6 +118,7 @@ export {
   startUpload,
   fetchDocument,
   getDocumentManifest,
+  getDocumentContent,
   getDocumentSection,
   updateDocumentSection,
   getDocumentImage

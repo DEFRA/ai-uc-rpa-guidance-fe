@@ -1,6 +1,9 @@
 import { describe, test, expect } from 'vitest'
 
-import { splitSectionMarkdown } from '../../../../src/infra/markdown/section-heading.js'
+import {
+  splitDocumentMarkdown,
+  splitSectionMarkdown
+} from '../../../../src/infra/markdown/section-heading.js'
 
 describe('#splitSectionMarkdown', () => {
   test('Should separate the generated heading line from the body', () => {
@@ -97,5 +100,44 @@ describe('#splitSectionMarkdown', () => {
     const result = splitSectionMarkdown('## 1\n\nText.\n', '1')
 
     expect(result.heading).toBe('')
+  })
+})
+
+describe('#splitDocumentMarkdown', () => {
+  test('Should separate the title line from the body', () => {
+    const result = splitDocumentMarkdown('# Wheat guidance\n\n## 1 Overview\n\nIntro.\n')
+
+    expect(result).toEqual({
+      title: 'Wheat guidance',
+      body: '## 1 Overview\n\nIntro.'
+    })
+  })
+
+  test('Should keep a leading number in the title', () => {
+    const result = splitDocumentMarkdown('# 2024 payment rates\n\nBody.\n')
+
+    expect(result.title).toBe('2024 payment rates')
+  })
+
+  test('Should report a null title when there is no heading line', () => {
+    const result = splitDocumentMarkdown('Just body text.\n')
+
+    expect(result).toEqual({ title: null, body: 'Just body text.' })
+  })
+
+  test('Should report a null title for empty markdown', () => {
+    expect(splitDocumentMarkdown('')).toEqual({ title: null, body: '' })
+  })
+
+  test('Should normalise Windows line endings', () => {
+    const result = splitDocumentMarkdown('# Title\r\n\r\n## 1 Overview\r\n')
+
+    expect(result).toEqual({ title: 'Title', body: '## 1 Overview' })
+  })
+
+  test('Should preserve a non-breaking space in the title', () => {
+    const result = splitDocumentMarkdown('# Rural\u00a0payments\n\nBody.\n')
+
+    expect(result.title).toBe('Rural\u00a0payments')
   })
 })
