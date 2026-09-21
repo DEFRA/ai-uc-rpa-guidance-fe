@@ -98,6 +98,22 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#searchGuidance', () => {
+    test('Should GET /guidance/search with the query encoded', async () => {
+      fetchMock.mockResponseOnce(
+        JSON.stringify({ query: 'sda', results: [], indexedDocuments: 3 }),
+        { status: 200 }
+      )
+
+      await guidanceApi.searchGuidance('sda status & more')
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/search/?q=sda%20status%20%26%20more',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+  })
+
   describe('#getDocument', () => {
     test('Should GET /guidance/documents/:id and return envelope', async () => {
       const doc = { id: 'doc-1', title: 'Test', status: 'complete' }

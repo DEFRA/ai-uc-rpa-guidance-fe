@@ -107,6 +107,10 @@ async function rebuildSummaries (documentIds) {
   })
 }
 
+async function searchGuidance (query) {
+  return request(`/guidance/search/?q=${encodeURIComponent(query)}`)
+}
+
 async function initiateUpload (payload) {
   return request('/guidance/documents', { method: 'POST', body: payload })
 }
@@ -159,6 +163,7 @@ export {
   listDocuments,
   listSummaries,
   rebuildSummaries,
+  searchGuidance,
   getDocument,
   getDocumentManifest,
   getDocumentContent,

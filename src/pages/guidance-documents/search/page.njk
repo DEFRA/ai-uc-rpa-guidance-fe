@@ -1,0 +1,84 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% set page = 'guidance-documents' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <h1 class="govuk-heading-xl">Search guidance</h1>
+
+      <form method="get" action="/guidance-documents/search" class="govuk-!-margin-bottom-6">
+        {{ govukInput({
+          id: "q",
+          name: "q",
+          type: "search",
+          value: query,
+          label: {
+            text: "Find guidance",
+            classes: "govuk-label--m"
+          },
+          hint: {
+            text: "Search by title, by any words the guidance uses, or by asking a question."
+          },
+          classes: "govuk-!-width-two-thirds"
+        }) }}
+
+        {{ govukButton({ text: "Search" }) }}
+      </form>
+
+      {% if searched %}
+        {% if answer %}
+          <div class="govuk-inset-text">
+            <h2 class="govuk-heading-m govuk-!-margin-bottom-2">AI summary</h2>
+            <p class="govuk-body">{{ answer.answer }}</p>
+
+            {% if answer.cited | length %}
+              <p class="govuk-body-s govuk-!-margin-bottom-0">
+                Taken from:
+                {%- for result in answer.cited %}
+                  <a class="govuk-link" href="{{ result.startPath }}">
+                    {%- if result.sectionNumber %}{{ result.sectionNumber }} {{ result.heading }}{% else %}{{ result.documentTitle }}{% endif -%}
+                  </a>{{ "," if not loop.last }}
+                {%- endfor %}
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if results | length %}
+          <h2 class="govuk-heading-m">
+            {{ results | length }} result{{ "" if results | length == 1 else "s" }}
+          </h2>
+
+          {% for result in results %}
+            <div class="govuk-!-margin-bottom-6">
+              <h3 class="govuk-heading-s govuk-!-margin-bottom-1">
+                <a class="govuk-link" href="{{ result.startPath }}">
+                  {% if result.sectionNumber %}{{ result.sectionNumber }} {{ result.heading }}{% else %}{{ result.documentTitle }}{% endif %}
+                </a>
+              </h3>
+              {% if result.sectionNumber %}
+                <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-1">
+                  {{ result.documentTitle }}
+                </p>
+              {% endif %}
+              <p class="govuk-body">{{ result.reason }}</p>
+            </div>
+          {% endfor %}
+        {% else %}
+          <h2 class="govuk-heading-m">No results</h2>
+          <p class="govuk-body">
+            Nothing in the indexed guidance answers “{{ query }}”. Try the
+            words the guidance itself would use — a case type, an option code,
+            or the name of the check.
+          </p>
+        {% endif %}
+      {% endif %}
+
+    </main>
+  </div>
+{% endblock %}

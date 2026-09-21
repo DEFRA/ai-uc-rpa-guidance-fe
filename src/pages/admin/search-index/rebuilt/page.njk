@@ -1,0 +1,115 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = 'Index rebuilt' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <div class="govuk-panel govuk-panel--confirmation">
+        <h1 class="govuk-panel__title">Index rebuilt</h1>
+        <div class="govuk-panel__body">
+          Documents indexed<br>
+          <strong>{{ summaries | length }}</strong>
+        </div>
+      </div>
+
+      <p class="govuk-body">
+        {% if timeTaken %}Built in {{ timeTaken }}. {% endif %}
+        {{ purgedCount }} previous summar{{ "y" if purgedCount == 1 else "ies" }} discarded before this rebuild.
+      </p>
+
+      {% if failedCount %}
+        {{ govukWarningText({
+          text: failedCount + " document(s) could not be summarised. The reason is in the service logs.",
+          iconFallbackText: "Warning"
+        }) }}
+      {% endif %}
+
+      {% if summaries | length %}
+        <h2 class="govuk-heading-m">What the index holds</h2>
+
+        {% for summary in summaries %}
+          <h3 class="govuk-heading-m govuk-!-margin-bottom-2">
+            <a class="govuk-link" href="{{ summary.startPath }}">
+              {{ summary.title }}
+            </a>
+          </h3>
+          <p class="govuk-body">{{ summary.about }}</p>
+          <p class="govuk-body">{{ summary.usedFor }}</p>
+          <p class="govuk-body">
+            <a class="govuk-link" href="{{ summary.startPath }}">
+              Open this document
+            </a>
+          </p>
+
+          {% if summary.keywords | length %}
+            <p class="govuk-body-s govuk-hint">
+              Terms: {{ summary.keywords | join(", ") }}
+            </p>
+          {% endif %}
+
+          {% if summary.acronyms | length %}
+            <h4 class="govuk-heading-s">Acronyms</h4>
+            <ul class="govuk-list govuk-list--bullet govuk-body-s">
+              {% for entry in summary.acronyms %}
+                <li>
+                  <strong>{{ entry.acronym }}</strong> —
+                  {{ entry.expansion if entry.expansion else "not expanded in this document" }}
+                  {% if entry.sections | length %}
+                    <span class="govuk-hint govuk-!-margin-bottom-0">
+                      ({{ entry.sections | join(", ") }})
+                    </span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+
+          {% if summary.sections | length %}
+            <h4 class="govuk-heading-s">Sections</h4>
+
+            {% for section in summary.sections %}
+              <div class="govuk-!-margin-bottom-5">
+                <p class="govuk-body govuk-!-margin-bottom-1">
+                  <a class="govuk-link" href="{{ section.startPath }}">
+                    {{ section.number }} {{ section.heading }}
+                  </a>
+                </p>
+                <p class="govuk-body govuk-!-margin-bottom-1">{{ section.summary }}</p>
+                {% if section.keywords | length %}
+                  <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-0">
+                    Terms: {{ section.keywords | join(", ") }}
+                  </p>
+                {% endif %}
+                {% if section.acronyms | length %}
+                  <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-0">
+                    Acronyms:
+                    {%- for entry in section.acronyms %}
+                      {{ entry.acronym }}{% if entry.expansion %} ({{ entry.expansion }}){% endif %}{{ "," if not loop.last }}
+                    {%- endfor %}
+                  </p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          {% if not loop.last %}
+            <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <p class="govuk-body">Nothing is indexed yet.</p>
+      {% endif %}
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/admin/search-index">
+          Back to search index admin
+        </a>
+      </p>
+
+    </main>
+  </div>
+{% endblock %}
