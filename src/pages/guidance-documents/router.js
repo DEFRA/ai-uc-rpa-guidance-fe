@@ -10,6 +10,11 @@ import * as uploadController from './upload/controller.js'
 import * as uploadFileController from './upload/file/controller.js'
 import * as viewerController from './viewer/controller.js'
 
+// A heading is one line of a document and a search is something a person
+// typed: both are bounded well short of what the payload limit allows.
+const MAX_HEADING_LENGTH = 500
+const MAX_QUERY_LENGTH = 500
+
 const sectionParams = Joi.object({
   documentId: Joi.string().required(),
   sectionNumber: Joi.string().pattern(/^\d+(\.\d+)*$/).required()
@@ -32,12 +37,12 @@ const documentNotFound = (_request, _h, err) => {
 const DOCUMENT_PAYLOAD_MAX_BYTES = 10485760
 
 const documentEditPayload = Joi.object({
-  title: Joi.string().trim().max(500).required(),
+  title: Joi.string().trim().max(MAX_HEADING_LENGTH).required(),
   markdown: Joi.string().allow('').max(10000000).required()
 })
 
 const editPayload = Joi.object({
-  heading: Joi.string().trim().max(500).required(),
+  heading: Joi.string().trim().max(MAX_HEADING_LENGTH).required(),
   markdown: Joi.string().allow('').max(1000000).required()
 })
 
@@ -70,7 +75,7 @@ const routes = [
     options: {
       validate: {
         query: Joi.object({
-          q: Joi.string().trim().allow('').max(500).default('')
+          q: Joi.string().trim().allow('').max(MAX_QUERY_LENGTH).default('')
         })
       }
     }

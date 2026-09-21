@@ -8,6 +8,10 @@ import { EXTENSIONS, TEXT_COLOURS } from './extensions.js'
 // Buttons are declared as data, so the toolbar markup and the command wiring
 // cannot drift apart. They are grouped so that a long toolbar wraps into
 // meaningful clusters rather than one undifferentiated run.
+// The attribute that names a control for assistive technology, used by every
+// control this module builds.
+const ARIA_LABEL = 'aria-label'
+
 const INLINE_BUTTONS = [
   { command: 'bold', label: 'Bold', run: (chain) => chain.toggleBold() },
   { command: 'italic', label: 'Italic', run: (chain) => chain.toggleItalic() },
@@ -106,7 +110,7 @@ function createButton (editor, spec) {
   // Swatches have no visible text, so they carry their name for assistive
   // technology and as a tooltip for everyone else.
   if (spec.ariaLabel) {
-    button.setAttribute('aria-label', spec.ariaLabel)
+    button.setAttribute(ARIA_LABEL, spec.ariaLabel)
     button.title = spec.ariaLabel
   }
 
@@ -126,7 +130,7 @@ function createToolbar (editor, groups) {
   const toolbar = document.createElement('div')
   toolbar.className = 'app-editor__toolbar'
   toolbar.setAttribute('role', 'toolbar')
-  toolbar.setAttribute('aria-label', 'Formatting')
+  toolbar.setAttribute(ARIA_LABEL, 'Formatting')
 
   for (const group of groups) {
     const element = document.createElement('div')
@@ -170,7 +174,7 @@ function mountGuidanceEditor (textarea) {
 
   const container = document.createElement('div')
   container.className = 'app-editor'
-  textarea.insertAdjacentElement('beforebegin', container)
+  textarea.before(container)
 
   const content = document.createElement('div')
   content.className = 'app-editor__content'
@@ -186,7 +190,7 @@ function mountGuidanceEditor (textarea) {
     contentType: 'markdown',
     editorProps: {
       attributes: {
-        'aria-label': label?.textContent.trim() || 'Content',
+        [ARIA_LABEL]: label?.textContent.trim() || 'Content',
         'aria-describedby': `${textarea.id}-hint`
       }
     }
@@ -198,7 +202,7 @@ function mountGuidanceEditor (textarea) {
 
   container.append(createToolbar(editor, TOOLBAR_GROUPS), content, caption)
   textarea.classList.add('app-editor__source')
-  textarea.setAttribute('aria-label', SOURCE_LABEL)
+  textarea.setAttribute(ARIA_LABEL, SOURCE_LABEL)
 
   const writeThrough = () => {
     textarea.value = toStoredImagePaths(editor.getMarkdown(), documentId)

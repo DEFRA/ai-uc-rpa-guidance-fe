@@ -6,11 +6,11 @@ import { searchIndexViewModel } from './view-model.js'
 const NOTHING_SELECTED = 'Select at least one document to index'
 
 /**
- * @param {import('@hapi/hapi').Request} request
+ * @param {import('@hapi/hapi').Request} _request
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
-async function getSearchIndexAdmin (request, h) {
+async function getSearchIndexAdmin (_request, h) {
   const documents = await listAllGuidanceDocuments()
 
   return h.view('admin/search-index/page.njk', searchIndexViewModel(documents))
@@ -47,11 +47,11 @@ async function postSearchIndexRebuild (request, h) {
 /**
  * Re-render the page with an error rather than rebuilding nothing.
  *
- * @param {import('@hapi/hapi').Request} request
+ * @param {import('@hapi/hapi').Request} _request
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
-async function rebuildFailAction (request, h) {
+async function rebuildFailAction (_request, h) {
   const documents = await listAllGuidanceDocuments()
 
   return h

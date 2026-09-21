@@ -175,6 +175,30 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#getDocumentContent', () => {
+    test('Should GET the whole document as text', async () => {
+      fetchMock.mockResponseOnce('# A Guide\n\nBody.', { status: 200 })
+
+      const res = await guidanceApi.getDocumentContent('doc-1')
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toBe('# A Guide\n\nBody.')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/content',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should report a document with no stored content as not found', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getDocumentContent('doc-1')
+
+      expect(res.ok).toBe(false)
+      expect(res.data).toBeNull()
+    })
+  })
+
   describe('#getDocumentSection', () => {
     test('Should GET the section as text/markdown', async () => {
       fetchMock.mockResponseOnce('## 1 Intro\n\nContent.', {

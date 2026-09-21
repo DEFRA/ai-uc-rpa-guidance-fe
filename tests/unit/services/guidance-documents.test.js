@@ -50,6 +50,23 @@ describe('guidance-documents service', () => {
     })
   })
 
+  describe('#getDocumentContent', () => {
+    test('Should return the stored Markdown', async () => {
+      guidanceApi.getDocumentContent.mockResolvedValueOnce({
+        ok: true,
+        data: '# A Guide'
+      })
+
+      expect(await guidanceService.getDocumentContent('doc-1')).toBe('# A Guide')
+    })
+
+    test('Should return null for a document with no stored content', async () => {
+      guidanceApi.getDocumentContent.mockResolvedValueOnce({ ok: false, data: null })
+
+      expect(await guidanceService.getDocumentContent('doc-1')).toBeNull()
+    })
+  })
+
   describe('#getCompleteDocuments', () => {
     test('Should return only documents with status complete', async () => {
       guidanceApi.listDocuments.mockResolvedValueOnce({

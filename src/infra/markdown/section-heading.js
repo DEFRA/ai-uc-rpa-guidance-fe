@@ -2,21 +2,38 @@
 // "## {number} {heading}". The editor presents the heading text and the body as
 // separate controls, so the two have to be pulled apart for display; the backend
 // composes the line again on save, which is why there is no inverse here.
-const HEADING_LINE = /^#{1,6}[ \t]+(.*)$/
+// No `$`: `.*` already runs to the end of the line, and anchoring it made the
+// engine backtrack across the whitespace the capture could also have matched.
+const HEADING_LINE = /^#{1,6}[ \t]+(.*)/
 
 // Only ASCII layout whitespace is trimmed. String.trim() would also strip
 // U+00A0, but a non-breaking space is a character the author chose, and
 // Word-derived guidance is full of them.
-const SURROUNDING_WHITESPACE = /^[ \t\r\n]+|[ \t\r\n]+$/g
+const LAYOUT_WHITESPACE = ' \t\r\n'
 
 /**
  * Trim layout whitespace without touching content characters.
+ *
+ * Walked rather than matched: an anchored `[ \t\r\n]+$` rescans the whole run
+ * of whitespace from every starting position when the line does not end in
+ * whitespace, which is quadratic in the length of the run.
  *
  * @param {string} text
  * @returns {string}
  */
 function trimLayoutWhitespace (text) {
-  return text.replace(SURROUNDING_WHITESPACE, '')
+  let start = 0
+  let end = text.length
+
+  while (start < end && LAYOUT_WHITESPACE.includes(text[start])) {
+    start += 1
+  }
+
+  while (end > start && LAYOUT_WHITESPACE.includes(text[end - 1])) {
+    end -= 1
+  }
+
+  return text.slice(start, end)
 }
 
 /**
