@@ -1,10 +1,9 @@
 import { Editor } from '@tiptap/core'
-Mar
 import {
   toBrowserImagePaths,
   toStoredImagePaths
 } from '../../../infra/markdown/editor-image-paths.js'
-import { EXTENSION_VARIANTS, TEXT_COLOURS } from './extensions.js'
+import { EXTENSIONS, TEXT_COLOURS } from './extensions.js'
 
 // Buttons are declared as data, so the toolbar markup and the command wiring
 // cannot drift apart. They are grouped so that a long toolbar wraps into
@@ -59,43 +58,44 @@ const COLOUR_BUTTONS = [
   { command: 'unsetColor', label: 'Clear', ariaLabel: 'Remove colour and highlight', run: (chain) => chain.unsetColor().unsetHighlight() }
 ]
 
+// Names the Markdown pane, for sighted readers and assistive technology alike.
+const SOURCE_LABEL = 'Markdown source'
+
 const HISTORY_BUTTONS = [
   { command: 'undo', label: 'Undo', run: (chain) => chain.undo() },
   { command: 'redo', label: 'Redo', run: (chain) => chain.redo() }
 ]
 
-// The toolbars stay here: which buttons a variant shows is a browser concern,
-// while which extensions it loads decides the saved Markdown, so that half lives
-// in extensions.js where a headless caller can share it.
-const VARIANTS = {
-  section: {
-    extensions: EXTENSION_VARIANTS.section,
-    groups: [INLINE_BUTTONS],
-    compact: false
-  },
-  document: {
-    extensions: EXTENSION_VARIANTS.document,
-    groups: [BLOCK_BUTTONS, INLINE_BUTTONS, TABLE_BUTTONS, COLOUR_BUTTONS, HISTORY_BUTTONS],
-    compact: true
-  }
-}
+// The toolbar stays here: which buttons it shows is a browser concern, while
+// which extensions it loads decides the saved Markdown, so that half lives in
+// extensions.js where a headless caller can share it.
+//
+// Every editor gets the same toolbar. A screen offering fewer controls would be
+// a second Markdown flavour to keep in step with this one, and an editor moving
+// between the section and document screens would find the same document
+// formattable in two different ways.
+const TOOLBAR_GROUPS = [
+  BLOCK_BUTTONS,
+  INLINE_BUTTONS,
+  TABLE_BUTTONS,
+  COLOUR_BUTTONS,
+  HISTORY_BUTTONS
+]
 
 /**
  * Build one toolbar button.
  *
  * @param {import('@tiptap/core').Editor} editor
  * @param {object} spec One entry from a button group.
- * @param {boolean} compact Whether to shrink the button to toolbar size.
  * @returns {HTMLButtonElement}
  */
-function createButton (editor, spec, compact) {
+function createButton (editor, spec) {
   const button = document.createElement('button')
 
   // Explicitly not a submit button: it lives inside the edit form.
   button.type = 'button'
   button.className = [
-    'govuk-button govuk-button--secondary app-editor__button',
-    compact ? 'app-editor__button--compact' : '',
+    'govuk-button govuk-button--secondary app-editor__button app-editor__button--compact',
     spec.classes ?? ''
   ]
     .filter(Boolean)
@@ -120,10 +120,9 @@ function createButton (editor, spec, compact) {
  *
  * @param {import('@tiptap/core').Editor} editor
  * @param {object[][]} groups Button specs, one array per visual group.
- * @param {boolean} compact
  * @returns {HTMLElement}
  */
-function createToolbar (editor, groups, compact) {
+function createToolbar (editor, groups) {
   const toolbar = document.createElement('div')
   toolbar.className = 'app-editor__toolbar'
   toolbar.setAttribute('role', 'toolbar')
@@ -134,7 +133,7 @@ function createToolbar (editor, groups, compact) {
     element.className = 'app-editor__group'
 
     for (const spec of group) {
-      element.append(createButton(editor, spec, compact))
+      element.append(createButton(editor, spec))
     }
 
     toolbar.append(element)
@@ -144,14 +143,18 @@ function createToolbar (editor, groups, compact) {
 }
 
 /**
- * Replace a Markdown textarea with a WYSIWYG editor over the same content.
+ * Mount a WYSIWYG editor over a Markdown textarea, keeping both.
  *
- * The textarea stays the form's source of truth: it is hidden rather than
- * removed, and refreshed from the editor on submit. With no JavaScript it is
- * simply an ordinary Markdown textarea.
+ * The textarea stays the form's source of truth and stays visible: the same
+ * document as text, editable in its own right, so anything the toolbar cannot
+ * express can still be written by hand. With no JavaScript it is simply an
+ * ordinary Markdown textarea.
  *
- * `data-editor-toolbar` selects the variant; an absent attribute keeps the
- * single-section toolbar the editor shipped with.
+ * The two panes hand the document back and forth rather than mirroring on every
+ * keystroke, which would mean serialising the whole document as the author
+ * types. Focus is the handoff: the source is refreshed from the editor when the
+ * author moves into it, and read back when they leave. `sourceEdited` records
+ * which pane spoke last, so a save can never discard what was actually typed.
  *
  * @param {HTMLTextAreaElement} textarea
  * @returns {import('@tiptap/core').Editor|null} The editor, or null if it could
@@ -165,8 +168,6 @@ function mountGuidanceEditor (textarea) {
     return null
   }
 
-  const variant = VARIANTS[textarea.dataset.editorToolbar] ?? VARIANTS.section
-
   const container = document.createElement('div')
   container.className = 'app-editor'
   textarea.insertAdjacentElement('beforebegin', container)
@@ -174,28 +175,64 @@ function mountGuidanceEditor (textarea) {
   const content = document.createElement('div')
   content.className = 'app-editor__content'
 
+  // The form's own label names the textarea, which is now one of two controls,
+  // so each is named for what it holds. The hint applies to both.
+  const label = form.querySelector(`label[for="${textarea.id}"]`)
+
   const editor = new Editor({
     element: content,
-    extensions: variant.extensions,
+    extensions: EXTENSIONS,
     content: toBrowserImagePaths(textarea.value, documentId),
     contentType: 'markdown',
     editorProps: {
       attributes: {
-        // Associate the editable region with the textarea's existing label and hint.
-        'aria-labelledby': `${textarea.id}-label`,
+        'aria-label': label?.textContent.trim() || 'Content',
         'aria-describedby': `${textarea.id}-hint`
       }
     }
   })
 
-  container.append(
-    createToolbar(editor, variant.groups, variant.compact),
-    content
-  )
-  textarea.hidden = true
+  const caption = document.createElement('p')
+  caption.className = 'app-editor__source-caption'
+  caption.textContent = SOURCE_LABEL
+
+  container.append(createToolbar(editor, TOOLBAR_GROUPS), content, caption)
+  textarea.classList.add('app-editor__source')
+  textarea.setAttribute('aria-label', SOURCE_LABEL)
+
+  const writeThrough = () => {
+    textarea.value = toStoredImagePaths(editor.getMarkdown(), documentId)
+  }
+
+  let sourceEdited = false
+
+  textarea.addEventListener('focus', writeThrough)
+  textarea.addEventListener('input', () => {
+    sourceEdited = true
+  })
+
+  textarea.addEventListener('blur', () => {
+    if (!sourceEdited) {
+      return
+    }
+
+    editor.commands.setContent(
+      toBrowserImagePaths(textarea.value, documentId),
+      { contentType: 'markdown' }
+    )
+
+    // Written back so both panes show the text that a save would store, rather
+    // than leaving the author guessing which of the two it would take.
+    writeThrough()
+    sourceEdited = false
+  })
 
   form.addEventListener('submit', () => {
-    textarea.value = toStoredImagePaths(editor.getMarkdown(), documentId)
+    // A save straight from the source pane, with no blur in between, keeps what
+    // is in the box; anything else takes the editor's version.
+    if (!sourceEdited) {
+      writeThrough()
+    }
   })
 
   return editor

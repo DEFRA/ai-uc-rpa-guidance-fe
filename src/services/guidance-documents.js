@@ -3,6 +3,10 @@ import { constants as statusCodes } from 'node:http2'
 import * as guidanceApi from '../infra/api/guidance-api.js'
 import { FetchDocumentOutcome, UpdateSectionOutcome } from '../models/guidance-documents.js'
 
+// The guidance API caps page_size at 100, so this is as unpaged as a single
+// request gets.
+const ALL_DOCUMENTS_PAGE_SIZE = 100
+
 /**
  * @param {number} [page=1]
  * @param {number} [pageSize=10]
@@ -11,6 +15,17 @@ import { FetchDocumentOutcome, UpdateSectionOutcome } from '../models/guidance-d
 async function listGuidanceDocuments (page = 1, pageSize = 10) {
   const res = await guidanceApi.listDocuments(page, pageSize)
   return res.data
+}
+
+/**
+ * Every guidance document, up to the API's maximum page size. The admin pages
+ * act on the whole corpus rather than a page of it.
+ *
+ * @returns {Promise<object[]>}
+ */
+async function listAllGuidanceDocuments () {
+  const res = await guidanceApi.listDocuments(1, ALL_DOCUMENTS_PAGE_SIZE)
+  return res.data.items
 }
 
 /**
@@ -114,6 +129,7 @@ async function getDocumentImage (documentId, filename) {
 
 export {
   listGuidanceDocuments,
+  listAllGuidanceDocuments,
   getCompleteDocuments,
   startUpload,
   fetchDocument,

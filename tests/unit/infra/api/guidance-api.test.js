@@ -55,6 +55,49 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#listSummaries', () => {
+    test('Should GET /guidance/summaries/', async () => {
+      const data = { items: [], failures: [] }
+      fetchMock.mockResponseOnce(JSON.stringify(data), { status: 200 })
+
+      const res = await guidanceApi.listSummaries()
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toEqual(data)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/summaries/',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+  })
+
+  describe('#rebuildSummaries', () => {
+    test('Should POST the selected document ids', async () => {
+      fetchMock.mockResponseOnce(
+        JSON.stringify({ items: [], failures: [] }),
+        { status: 200 }
+      )
+
+      await guidanceApi.rebuildSummaries(['doc-1', 'doc-2'])
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/summaries/rebuild',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ documentIds: ['doc-1', 'doc-2'] })
+        })
+      )
+    })
+
+    test('Should throw on non-OK response', async () => {
+      fetchMock.mockResponseOnce('', { status: 500, statusText: 'Server Error' })
+
+      await expect(guidanceApi.rebuildSummaries([])).rejects.toThrow(
+        'Guidance API POST /guidance/summaries/rebuild failed: 500 Server Error'
+      )
+    })
+  })
+
   describe('#getDocument', () => {
     test('Should GET /guidance/documents/:id and return envelope', async () => {
       const doc = { id: 'doc-1', title: 'Test', status: 'complete' }

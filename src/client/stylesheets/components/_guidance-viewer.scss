@@ -90,3 +90,131 @@
     margin-bottom: govuk-spacing(6);
   }
 }
+
+// The section as the editor's schema renders it. ProseMirror emits plain HTML
+// elements rather than the GOV.UK classes the server's renderer writes, so the
+// GOV.UK styles are applied here by element instead -- the same page, reached the
+// other way round. See `client/javascripts/guidance-viewer/mount.js`.
+// stylelint-disable selector-no-qualifying-type
+.app-guidance-content__rendered {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-top: govuk-spacing(6);
+    margin-bottom: govuk-spacing(4);
+  }
+
+  h1 {
+    @include govuk-font($size: 48, $weight: bold);
+  }
+
+  h2 {
+    @include govuk-font($size: 36, $weight: bold);
+  }
+
+  h3 {
+    @include govuk-font($size: 24, $weight: bold);
+  }
+
+  h4,
+  h5,
+  h6 {
+    @include govuk-font($size: 19, $weight: bold);
+  }
+
+  // The section's own heading opens the page, so it needs no space above it.
+  > .ProseMirror > :first-child { // stylelint-disable-line scss/selector-class-pattern
+    margin-top: 0;
+  }
+
+  p {
+    @include govuk-font($size: 19);
+
+    margin-top: 0;
+    margin-bottom: govuk-spacing(4);
+  }
+
+  ul,
+  ol {
+    @include govuk-font($size: 19);
+
+    margin-top: 0;
+    margin-bottom: govuk-spacing(4);
+    padding-left: govuk-spacing(5);
+  }
+
+  li {
+    margin-bottom: govuk-spacing(1);
+  }
+
+  a {
+    @include govuk-link-common;
+    @include govuk-link-style-default;
+    @include govuk-link-style-no-visited-state;
+  }
+
+  // A callout box in Word arrives as a blockquote -- a one-cell table is how the
+  // guidance draws one, and the parser has nothing else in Markdown to say it
+  // with. GOV.UK draws that as inset text, so this does too.
+  blockquote {
+    @include govuk-font($size: 19);
+
+    margin-left: 0;
+    padding: govuk-spacing(3);
+    border-left: $govuk-border-width-wide solid $govuk-border-colour;
+
+    > :first-child {
+      margin-top: 0;
+    }
+
+    > :last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: govuk-spacing(4) 0;
+  }
+
+  mark {
+    background-color: govuk-colour('yellow');
+  }
+
+  // A converted table is the one thing here that must not be approximated: the
+  // page is how anyone checks what the conversion made of it.
+  table {
+    @include govuk-font($size: 19);
+
+    width: 100%;
+    margin-bottom: govuk-spacing(6);
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: govuk-spacing(2) govuk-spacing(4) govuk-spacing(2) 0;
+    border-bottom: 1px solid $govuk-border-colour;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  // A cell's content is a block, and the paragraph inside a header cell carries
+  // its own font-weight, so the header has to say bold where the text is.
+  th,
+  th p {
+    font-weight: bold;
+  }
+
+  // A cell's own blocks sit tight to it: the row is the spacing.
+  th > :last-child,
+  td > :last-child {
+    margin-bottom: 0;
+  }
+}
+// stylelint-enable selector-no-qualifying-type

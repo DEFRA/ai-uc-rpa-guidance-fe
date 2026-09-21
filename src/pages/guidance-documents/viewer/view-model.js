@@ -1,7 +1,8 @@
+import { colouredText } from '../../../infra/markdown/coloured-text.js'
 import { createMarkdown } from '../../../infra/markdown/markdown.js'
+import { toBrowserImagePaths } from '../../../infra/markdown/editor-image-paths.js'
 import { govukRenderer } from '../../../infra/markdown/govuk-renderer.js'
-import { rewriteIntraDocLinks } from '../../../infra/markdown/intra-doc-links.js'
-import { rewriteImagePaths } from '../../../infra/markdown/rewrite-image-paths.js'
+import { linkSectionReferences } from '../../../infra/markdown/intra-doc-links.js'
 import { sanitiseGuidanceHtml } from '../../../infra/markdown/sanitise.js'
 import { shiftHeadings } from '../../../infra/markdown/shift-headings.js'
 import { guidanceDocumentsBreadcrumbs } from '../../common/breadcrumbs.js'
@@ -93,15 +94,23 @@ function sectionViewModel (params) {
     ? (current.level + 1) - SECTION_HEADING_DEPTH
     : 0
 
+  // The document the page shows, in the one form both renderings start from: the
+  // editor's schema reads Markdown and the server's pipeline renders Markdown, so
+  // anything true of the section on both screens -- where a cross-reference points,
+  // where an image is served from, how deep its headings read -- is settled here
+  // rather than once per renderer.
+  const sectionMarkdown = linkSectionReferences(
+    shiftHeadings(toBrowserImagePaths(markdown, documentId), headingShift),
+    { documentId, sections }
+  )
+
   // Sanitised last: the guidance is imported from Word and editable by hand, and
   // marked passes raw HTML through, so the rendered output is untrusted.
   const contentHtml = sanitiseGuidanceHtml(
     createMarkdown()
       .use(govukRenderer())
-      .use(shiftHeadings({ by: headingShift }))
-      .use(rewriteIntraDocLinks({ documentId, sections }))
-      .use(rewriteImagePaths({ documentId }))
-      .render(markdown)
+      .use(colouredText())
+      .render(sectionMarkdown)
   )
 
   const toLink = (section) =>
@@ -120,9 +129,11 @@ function sectionViewModel (params) {
   return {
     pageTitle: `${sectionTitle} - ${manifest.title}`,
     page: 'guidance-documents',
+    documentId,
     documentTitle: manifest.title,
     sectionTitle,
     contentHtml,
+    sectionMarkdown,
     editHref: current ? `${sectionHref}/edit` : null,
     toc: buildTocTree(sections, documentId, sectionNumber),
     previous: toLink(sections[index - 1]),

@@ -11,6 +11,7 @@ export default defineConfig({
         htmlAssets: 'src/client/assets.html',
         application: 'src/client/javascripts/application.js',
         guidanceEditor: 'src/client/javascripts/guidance-editor.js',
+        guidanceViewer: 'src/client/javascripts/guidance-viewer.js',
         applicationCss: 'src/client/stylesheets/application.scss',
         defraLogo: 'src/client/images/defra-logo.svg'
       }

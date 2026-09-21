@@ -101,7 +101,7 @@ async function normalise (markdown) {
   const { splitDocumentMarkdown } = await import(
     '../src/infra/markdown/section-heading.js'
   )
-  const { EXTENSION_VARIANTS } = await import(
+  const { EXTENSIONS } = await import(
     '../src/client/javascripts/guidance-editor/extensions.js'
   )
   const { Editor } = await import('@tiptap/core')
@@ -110,7 +110,7 @@ async function normalise (markdown) {
 
   const editor = new Editor({
     element: document.createElement('div'),
-    extensions: EXTENSION_VARIANTS.document,
+    extensions: EXTENSIONS,
     content: body,
     contentType: 'markdown'
   })

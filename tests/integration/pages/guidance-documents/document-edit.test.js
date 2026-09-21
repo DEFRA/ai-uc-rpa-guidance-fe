@@ -49,7 +49,7 @@ describe('#guidanceDocumentEditController', () => {
       expect(payload).not.toContain('# My Guidance\n')
     })
 
-    test('Should mount the editor with the document toolbar', async () => {
+    test('Should mount the editor over the document body', async () => {
       guidanceDocumentsService.getDocumentManifest.mockResolvedValueOnce(MANIFEST)
       guidanceDocumentsService.getDocumentContent.mockResolvedValueOnce(DOCUMENT_MARKDOWN)
 
@@ -59,7 +59,6 @@ describe('#guidanceDocumentEditController', () => {
       })
 
       expect(payload).toContain('data-module="guidance-editor"')
-      expect(payload).toContain('data-editor-toolbar="document"')
       expect(payload).toContain('data-document-id="doc-1"')
       expect(payload).toContain('app-document-editor')
       expect(payload).toContain('guidance-editor')

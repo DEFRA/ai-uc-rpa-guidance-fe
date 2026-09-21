@@ -2,6 +2,10 @@
 import { describe, test, expect, beforeEach } from 'vitest'
 
 import { mountGuidanceEditor } from '../../../src/client/javascripts/guidance-editor/mount.js'
+import { colouredText } from '../../../src/infra/markdown/coloured-text.js'
+import { govukRenderer } from '../../../src/infra/markdown/govuk-renderer.js'
+import { createMarkdown } from '../../../src/infra/markdown/markdown.js'
+import { sanitiseGuidanceHtml } from '../../../src/infra/markdown/sanitise.js'
 
 const DOCUMENT_ID = 'doc-1'
 
@@ -39,8 +43,7 @@ function renderDocumentForm (markdown) {
     <form method="post" action="/guidance-documents/${DOCUMENT_ID}/edit">
       <textarea id="markdown" name="markdown"
         data-module="guidance-editor"
-        data-document-id="${DOCUMENT_ID}"
-        data-editor-toolbar="document"></textarea>
+        data-document-id="${DOCUMENT_ID}"></textarea>
       <button type="submit">Save document</button>
     </form>
   `
@@ -54,12 +57,16 @@ describe('#mountGuidanceEditor', () => {
     document.body.innerHTML = ''
   })
 
-  test('Should hide the textarea once the editor is mounted', () => {
+  test('Should keep the Markdown source visible beside the editor', () => {
     const { textarea } = renderForm('Some text.')
 
     mountGuidanceEditor(textarea)
 
-    expect(textarea.hidden).toBe(true)
+    expect(textarea.hidden).toBe(false)
+    // Two controls now, so each must say which it is.
+    expect(textarea.getAttribute('aria-label')).toBe('Markdown source')
+    expect(document.querySelector('.ProseMirror').getAttribute('aria-label'))
+      .toBe('Content')
   })
 
   test('Should render an editable region showing the content', () => {
@@ -154,20 +161,26 @@ describe('#mountGuidanceEditor', () => {
   })
 })
 
-describe('#mountGuidanceEditor with the document toolbar', () => {
+function toolbarCommands () {
+  return [...document.querySelectorAll('[data-editor-command]')].map(
+    (button) => button.dataset.editorCommand
+  )
+}
+
+describe('#mountGuidanceEditor toolbar', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
   })
 
-  test('Should keep the section toolbar to its four buttons', () => {
-    const { textarea } = renderForm('Some text.')
-
+  test('Should offer the section form the same toolbar as the document form', () => {
+    const { textarea } = renderDocumentForm('Some text.')
     mountGuidanceEditor(textarea)
+    const documentCommands = toolbarCommands()
 
-    const commands = [...document.querySelectorAll('[data-editor-command]')].map(
-      (button) => button.dataset.editorCommand
-    )
-    expect(commands).toEqual(['bold', 'italic', 'bulletList', 'orderedList'])
+    document.body.innerHTML = ''
+    mountGuidanceEditor(renderForm('Some text.').textarea)
+
+    expect(toolbarCommands()).toEqual(documentCommands)
   })
 
   test('Should offer block, table, colour and history commands', () => {
@@ -175,9 +188,7 @@ describe('#mountGuidanceEditor with the document toolbar', () => {
 
     mountGuidanceEditor(textarea)
 
-    const commands = [...document.querySelectorAll('[data-editor-command]')].map(
-      (button) => button.dataset.editorCommand
-    )
+    const commands = toolbarCommands()
 
     for (const command of [
       'heading2', 'heading3', 'heading4', 'paragraph', 'blockquote',
@@ -228,11 +239,10 @@ describe('#mountGuidanceEditor with the document toolbar', () => {
     editor.commands.selectAll()
     document.querySelector('[data-editor-command="colorRed"]').click()
 
-    const span = document.querySelector('.ProseMirror span[data-colour]')
-    expect(span).not.toBeNull()
     // The class is what survives a style-src without 'unsafe-inline'.
-    expect(span.className).toContain('app-editor__text--red')
-    expect(span.getAttribute('data-colour')).toBe('#d4351c')
+    const span = document.querySelector('.ProseMirror span.app-editor__text--red')
+    expect(span).not.toBeNull()
+    expect(span.textContent).toBe('Colour me.')
   })
 
   test('Should highlight with a bare mark, carrying no inline style', () => {
@@ -265,5 +275,216 @@ describe('#mountGuidanceEditor with the document toolbar', () => {
     form.dispatchEvent(new Event('submit'))
 
     expect(textarea.value).toContain('## Overview')
+  })
+})
+
+// Colour has no Markdown syntax, so it is written as a Pandoc-style bracketed
+// span: `[text]{.red}`. That only holds if both ends agree on the syntax, and
+// each leg here is the real one -- the editor the browser mounts, the form
+// submit that fills the textarea the controller posts, and the render pipeline
+// the viewer page uses.
+describe('#mountGuidanceEditor colour round trip', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  /** Mount an editor over `markdown`, apply `edit`, then save as the form does. */
+  function save (markdown, edit = () => {}) {
+    document.body.innerHTML = ''
+    const { form, textarea } = renderForm(markdown)
+    const editor = mountGuidanceEditor(textarea)
+
+    editor.commands.selectAll()
+    edit(editor)
+    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+
+    return textarea.value
+  }
+
+  /** Render saved Markdown the way the section viewer does. */
+  function read (markdown) {
+    return sanitiseGuidanceHtml(
+      createMarkdown().use(govukRenderer()).use(colouredText()).render(markdown)
+    )
+  }
+
+  /** Reopen saved Markdown in a new editor, as the edit page does. */
+  function reopen (markdown) {
+    document.body.innerHTML = ''
+    const { textarea } = renderForm(markdown)
+    mountGuidanceEditor(textarea)
+
+    return document.querySelector('.ProseMirror').innerHTML
+  }
+
+  test('Should save text colour as a bracketed span', () => {
+    const saved = save('Colour me.', (editor) =>
+      editor.chain().focus().setColor('#d4351c').run()
+    )
+
+    expect(saved).toBe('[Colour me.]{.red}')
+  })
+
+  test('Should show the reader the colour, by class rather than by style', () => {
+    const html = read(save('Colour me.', (editor) =>
+      editor.chain().focus().setColor('#00703c').run()
+    ))
+
+    expect(html).toContain('<span class="app-editor__text--green">Colour me.</span>')
+    // The sanitiser drops a style attribute, so it cannot be what carries the
+    // colour; nothing of the syntax may reach the reader either.
+    expect(html).not.toContain('style=')
+    expect(html).not.toContain('{.')
+  })
+
+  test('Should restore the colour when the saved section is reopened', () => {
+    const saved = save('Colour me.', (editor) =>
+      editor.chain().focus().setColor('#1d70b8').run()
+    )
+
+    expect(reopen(saved)).toContain('class="app-editor__text--blue"')
+  })
+
+  test('Should keep Markdown formatting inside a coloured span', () => {
+    // The span is claimed by a tokenizer on both sides, so its contents stay
+    // Markdown. Parsed as raw text, the `**` would come back as literal
+    // asterisks and the bold would be lost on the next save.
+    const saved = save('Colour me.', (editor) =>
+      editor.chain().focus().setColor('#1d70b8').toggleBold().run()
+    )
+
+    expect(saved).toBe('[**Colour me.**]{.blue}')
+    expect(read(saved)).toContain('<strong>Colour me.</strong>')
+    expect(reopen(saved)).toContain('<strong>Colour me.</strong>')
+  })
+
+  test('Should colour only the selected words', () => {
+    const saved = save('Red then plain.', (editor) =>
+      editor.chain().focus().setTextSelection({ from: 1, to: 4 }).setColor('#d4351c').run()
+    )
+
+    expect(saved).toBe('[Red]{.red} then plain.')
+    expect(read(saved)).toContain('</span> then plain.')
+  })
+
+  test('Should survive a second edit cycle unchanged', () => {
+    // Save, reopen, save again: an editor who opens a coloured section and
+    // saves without touching it must not change the file.
+    const first = save('Colour me.', (editor) =>
+      editor.chain().focus().setColor('#0b0c0c').run()
+    )
+
+    expect(save(first)).toBe(first)
+  })
+
+  test('Should leave an ordinary link alone', () => {
+    // Both tokenizers start looking at `[`, so a link is the syntax they are
+    // most likely to steal.
+    const saved = save('A [link](/x) stays a link.')
+
+    expect(saved).toBe('A [link](/x) stays a link.')
+    expect(read(saved)).toContain('href="/x"')
+  })
+
+  test('Should leave a class it does not recognise as literal text', () => {
+    // Neither tokenizer claims it, so the brackets are ordinary punctuation and
+    // the serialiser escapes them to keep them that way. What the reader sees is
+    // still the words as typed.
+    const saved = save('Say [nothing]{.mauve} of it.')
+
+    expect(saved).toBe('Say \\[nothing\\]{.mauve} of it.')
+    expect(read(saved)).toContain('[nothing]{.mauve}')
+  })
+
+  test('Should leave uncoloured text free of syntax', () => {
+    expect(save('Just words.')).toBe('Just words.')
+  })
+})
+
+// The Markdown source is a second view of the same document, not a preview: what
+// is typed there is what gets saved. Focus is the handoff between the two panes.
+describe('#mountGuidanceEditor Markdown source', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  /** Type into the source pane the way a person does: text, then an input event. */
+  function typeInSource (textarea, markdown) {
+    textarea.value = markdown
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  const blur = (element) => element.dispatchEvent(new Event('blur'))
+  const focus = (element) => element.dispatchEvent(new Event('focus'))
+  const submit = (form) =>
+    form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+
+  test('Should save what was typed into the source', () => {
+    const { form, textarea } = renderForm('Original text.')
+
+    mountGuidanceEditor(textarea)
+    typeInSource(textarea, 'Typed by hand.')
+    submit(form)
+
+    expect(textarea.value).toContain('Typed by hand.')
+    expect(textarea.value).not.toContain('Original text.')
+  })
+
+  test('Should save a hand-typed edit that never left the source pane', () => {
+    // Saving with the caret still in the box must not lose the last keystrokes.
+    const { form, textarea } = renderForm('Original text.')
+
+    mountGuidanceEditor(textarea)
+    typeInSource(textarea, '- one\n- two')
+    submit(form)
+
+    expect(textarea.value).toBe('- one\n- two')
+  })
+
+  test('Should show a hand-typed edit in the editor once focus leaves', () => {
+    const { textarea } = renderForm('Original text.')
+
+    mountGuidanceEditor(textarea)
+    typeInSource(textarea, '## A heading typed by hand')
+    blur(textarea)
+
+    const editable = document.querySelector('.ProseMirror')
+    expect(editable.querySelector('h2')?.textContent).toBe('A heading typed by hand')
+  })
+
+  test('Should refresh the source from the editor when the source is focused', () => {
+    const { textarea } = renderForm('Original text.')
+
+    const editor = mountGuidanceEditor(textarea)
+    editor.commands.selectAll()
+    editor.chain().focus().toggleBold().run()
+    focus(textarea)
+
+    expect(textarea.value).toBe('**Original text.**')
+  })
+
+  test('Should take the editor\'s version when the source was not touched', () => {
+    const { form, textarea } = renderForm('Original text.')
+
+    const editor = mountGuidanceEditor(textarea)
+    editor.commands.selectAll()
+    editor.chain().focus().setColor('#d4351c').run()
+    submit(form)
+
+    expect(textarea.value).toBe('[Original text.]{.red}')
+  })
+
+  test('Should keep stored image paths through a hand-typed edit', () => {
+    // The panes translate image paths in opposite directions; a round trip
+    // through the source must still leave the stored form in the textarea.
+    const { form, textarea } = renderForm('Original text.')
+
+    mountGuidanceEditor(textarea)
+    typeInSource(textarea, '![Diagram](/guidance/documents/doc-1/images/img_1.png)')
+    blur(textarea)
+    submit(form)
+
+    expect(textarea.value).toContain('/guidance/documents/doc-1/images/img_1.png')
+    expect(textarea.value).not.toContain('/guidance-documents/doc-1/assets/')
   })
 })

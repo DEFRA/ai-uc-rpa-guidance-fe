@@ -96,6 +96,17 @@ async function getDocumentImage (documentId, filename) {
   )
 }
 
+async function listSummaries () {
+  return request('/guidance/summaries/')
+}
+
+async function rebuildSummaries (documentIds) {
+  return request('/guidance/summaries/rebuild', {
+    method: 'POST',
+    body: { documentIds }
+  })
+}
+
 async function initiateUpload (payload) {
   return request('/guidance/documents', { method: 'POST', body: payload })
 }
@@ -146,6 +157,8 @@ async function getFeedbackForFinding (jobId, findingIndex) {
 
 export {
   listDocuments,
+  listSummaries,
+  rebuildSummaries,
   getDocument,
   getDocumentManifest,
   getDocumentContent,

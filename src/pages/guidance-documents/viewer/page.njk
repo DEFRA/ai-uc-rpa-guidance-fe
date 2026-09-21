@@ -16,7 +16,11 @@
         </div>
 
         <div class="govuk-grid-column-two-thirds">
-          <div class="app-guidance-content">
+          {# The section twice: the Markdown the editor's schema renders in the
+             browser, and the server's rendering of the same Markdown, which is
+             what a reader without JavaScript is left with. #}
+          <div class="app-guidance-content" data-module="guidance-viewer">
+            <textarea data-guidance-markdown hidden>{{ sectionMarkdown }}</textarea>
             {{ contentHtml | safe }}
           </div>
 
@@ -58,4 +62,8 @@
       </div>
     </main>
   </div>
+{% endblock %}
+
+{% block pageScripts %}
+  <script type="module" src="{{ getAssetPath('src/client/javascripts/guidance-viewer.js') }}"></script>
 {% endblock %}

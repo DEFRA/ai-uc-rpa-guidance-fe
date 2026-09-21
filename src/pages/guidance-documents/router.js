@@ -5,6 +5,7 @@ import * as confirmationController from './upload/confirmation/controller.js'
 import * as documentEditController from './document-edit/controller.js'
 import * as editController from './edit/controller.js'
 import * as listController from './list/controller.js'
+import * as searchController from './search/controller.js'
 import * as uploadController from './upload/controller.js'
 import * as uploadFileController from './upload/file/controller.js'
 import * as viewerController from './viewer/controller.js'
@@ -61,6 +62,18 @@ const routes = [
     method: 'GET',
     path: '/guidance-documents',
     handler: listController.getGuidanceDocuments
+  },
+  {
+    method: 'GET',
+    path: '/guidance-documents/search',
+    handler: searchController.getGuidanceDocumentSearch,
+    options: {
+      validate: {
+        query: Joi.object({
+          q: Joi.string().trim().allow('').max(500).default('')
+        })
+      }
+    }
   },
   {
     method: 'GET',

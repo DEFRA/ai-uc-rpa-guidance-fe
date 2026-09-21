@@ -216,3 +216,17 @@ img.ProseMirror-separator {
 .app-editor__text--black {
   color: govuk-colour('black');
 }
+
+// The Markdown source sits under the editor as a second view of one document,
+// so it reads as part of the same control rather than a stray form field.
+.app-editor__source-caption {
+  @include govuk-font($size: 16, $weight: bold);
+
+  margin: govuk-spacing(3) 0 govuk-spacing(1);
+}
+
+.app-editor__source {
+  @include govuk-font($size: 16);
+
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", menlo, consolas, monospace;
+}

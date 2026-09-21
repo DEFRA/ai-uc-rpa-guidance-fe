@@ -145,7 +145,9 @@ describe('#guidanceViewerController', () => {
     })
 
     expect(payload).not.toContain('<script>alert(1)</script>')
-    expect(payload).not.toContain('alert(1)')
+    // The page also carries the section's Markdown for the client-side viewer to
+    // render, so the smuggled tag reaches the browser -- as the text it is.
+    expect(payload).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
     // The surrounding legitimate content still renders.
     expect(payload).toContain('Before.')
     expect(payload).toContain('After.')
@@ -162,7 +164,10 @@ describe('#guidanceViewerController', () => {
       url: '/guidance-documents/doc-1/sections/1'
     })
 
-    expect(payload).not.toContain('onerror')
+    // Nothing in the page is an element carrying the handler: the rendered HTML
+    // has been sanitised, and the Markdown beside it is escaped text.
+    expect(payload).not.toContain('onerror="')
+    expect(payload).toContain('onerror=&quot;alert(1)&quot;')
   })
 
   test('Should offer a link to edit the section being viewed', async () => {

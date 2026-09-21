@@ -30,6 +30,26 @@ describe('guidance-documents service', () => {
     })
   })
 
+  describe('#listAllGuidanceDocuments', () => {
+    test('Should ask for one page holding the whole corpus', async () => {
+      guidanceApi.listDocuments.mockResolvedValueOnce({
+        ok: true,
+        data: { items: [{ id: 'doc-1' }], total: 1, page: 1, pageSize: 100 }
+      })
+
+      const result = await guidanceService.listAllGuidanceDocuments()
+
+      expect(result.map(d => d.id)).toEqual(['doc-1'])
+      expect(guidanceApi.listDocuments).toHaveBeenCalledWith(1, 100)
+    })
+
+    test('Should propagate unexpected errors', async () => {
+      guidanceApi.listDocuments.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(guidanceService.listAllGuidanceDocuments()).rejects.toThrow('Network error')
+    })
+  })
+
   describe('#getCompleteDocuments', () => {
     test('Should return only documents with status complete', async () => {
       guidanceApi.listDocuments.mockResolvedValueOnce({

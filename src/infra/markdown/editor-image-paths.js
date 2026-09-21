@@ -1,8 +1,7 @@
 // Stored guidance Markdown embeds images by their backend path, which the
-// browser cannot reach; this app proxies them on its own route. The read-only
-// viewer rewrites them per token (see rewrite-image-paths.js), but the editor
-// works on Markdown text and has to put the original paths back on save, so it
-// needs an exactly reversible pair.
+// browser cannot reach; this app proxies them on its own route. Both screens that
+// show a document rewrite them on the way in, and the editor has to put the
+// original paths back on save, so the pair has to be exactly reversible.
 //
 // Swapping the directory prefix is that pair: filenames cannot contain "/", so
 // the two forms are unambiguous, and the mapping covers raw <img> tags as well
