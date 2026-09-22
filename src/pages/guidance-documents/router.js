@@ -2,10 +2,49 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 import * as confirmationController from './upload/confirmation/controller.js'
+import * as documentEditController from './document-edit/controller.js'
+import * as editController from './edit/controller.js'
 import * as listController from './list/controller.js'
+import * as searchController from './search/controller.js'
 import * as uploadController from './upload/controller.js'
 import * as uploadFileController from './upload/file/controller.js'
 import * as viewerController from './viewer/controller.js'
+
+// A heading is one line of a document and a search is something a person
+// typed: both are bounded well short of what the payload limit allows.
+const MAX_HEADING_LENGTH = 500
+const MAX_QUERY_LENGTH = 500
+
+const sectionParams = Joi.object({
+  documentId: Joi.string().required(),
+  sectionNumber: Joi.string().pattern(/^\d+(\.\d+)*$/).required()
+})
+
+const sectionNotFound = (_request, _h, err) => {
+  throw Boom.notFound('Guidance section not found', err)
+}
+
+const documentParams = Joi.object({
+  documentId: Joi.string().required()
+})
+
+const documentNotFound = (_request, _h, err) => {
+  throw Boom.notFound('Guidance document not found', err)
+}
+
+// A whole document is far larger than a single section, and hapi's default
+// payload limit of 1 MiB would reject it outright.
+const DOCUMENT_PAYLOAD_MAX_BYTES = 10485760
+
+const documentEditPayload = Joi.object({
+  title: Joi.string().trim().max(MAX_HEADING_LENGTH).required(),
+  markdown: Joi.string().allow('').max(10000000).required()
+})
+
+const editPayload = Joi.object({
+  heading: Joi.string().trim().max(MAX_HEADING_LENGTH).required(),
+  markdown: Joi.string().allow('').max(1000000).required()
+})
 
 const routes = [
   {
@@ -31,6 +70,18 @@ const routes = [
   },
   {
     method: 'GET',
+    path: '/guidance-documents/search',
+    handler: searchController.getGuidanceDocumentSearch,
+    options: {
+      validate: {
+        query: Joi.object({
+          q: Joi.string().trim().allow('').max(MAX_QUERY_LENGTH).default('')
+        })
+      }
+    }
+  },
+  {
+    method: 'GET',
     path: '/guidance-documents/{documentId}/view',
     handler: viewerController.getGuidanceViewerIndex
   },
@@ -40,13 +91,55 @@ const routes = [
     handler: viewerController.getGuidanceViewerSection,
     options: {
       validate: {
-        params: Joi.object({
-          documentId: Joi.string().required(),
-          sectionNumber: Joi.string().pattern(/^\d+(\.\d+)*$/).required()
-        }),
-        failAction: (_request, _h, err) => {
-          throw Boom.notFound('Guidance section not found', err)
-        }
+        params: sectionParams,
+        failAction: sectionNotFound
+      }
+    }
+  },
+  {
+    method: 'GET',
+    path: '/guidance-documents/{documentId}/sections/{sectionNumber}/edit',
+    handler: editController.getGuidanceSectionEdit,
+    options: {
+      validate: {
+        params: sectionParams,
+        failAction: sectionNotFound
+      }
+    }
+  },
+  {
+    method: 'POST',
+    path: '/guidance-documents/{documentId}/sections/{sectionNumber}/edit',
+    handler: editController.postGuidanceSectionEdit,
+    options: {
+      validate: {
+        params: sectionParams,
+        payload: editPayload,
+        failAction: editController.guidanceSectionEditFailAction
+      }
+    }
+  },
+  {
+    method: 'GET',
+    path: '/guidance-documents/{documentId}/edit',
+    handler: documentEditController.getGuidanceDocumentEdit,
+    options: {
+      validate: {
+        params: documentParams,
+        failAction: documentNotFound
+      }
+    }
+  },
+  {
+    method: 'POST',
+    path: '/guidance-documents/{documentId}/edit',
+    handler: documentEditController.postGuidanceDocumentEdit,
+    options: {
+      payload: { maxBytes: DOCUMENT_PAYLOAD_MAX_BYTES },
+      validate: {
+        params: documentParams,
+        payload: documentEditPayload,
+        failAction: documentNotFound
       }
     }
   },

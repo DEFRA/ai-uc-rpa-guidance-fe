@@ -1,5 +1,6 @@
 {% extends "common/layout.njk" %}
 {% import "components/toc-nav/macro.njk" as tocNav %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% set page = 'guidance-documents' %}
 
@@ -15,9 +16,21 @@
         </div>
 
         <div class="govuk-grid-column-two-thirds">
-          <div class="app-guidance-content">
+          {# The section twice: the Markdown the editor's schema renders in the
+             browser, and the server's rendering of the same Markdown, which is
+             what a reader without JavaScript is left with. #}
+          <div class="app-guidance-content" data-module="guidance-viewer">
+            <textarea data-guidance-markdown hidden>{{ sectionMarkdown }}</textarea>
             {{ contentHtml | safe }}
           </div>
+
+          {% if editHref %}
+            {{ govukButton({
+              text: "Edit this section",
+              href: editHref,
+              classes: "govuk-button--secondary"
+            }) }}
+          {% endif %}
 
           {% if previous or next %}
             <nav class="govuk-pagination govuk-pagination--block" aria-label="Section navigation">
@@ -49,4 +62,8 @@
       </div>
     </main>
   </div>
+{% endblock %}
+
+{% block pageScripts %}
+  <script type="module" src="{{ getAssetPath('src/client/javascripts/guidance-viewer.js') }}"></script>
 {% endblock %}

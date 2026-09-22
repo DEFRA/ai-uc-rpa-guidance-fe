@@ -7,7 +7,9 @@ const baseUrl = config.get('guidanceApi.url')
 const responseParsers = {
   json: (res) => res.json(),
   text: (res) => res.text(),
-  arrayBuffer: async (res) => Buffer.from(await res.arrayBuffer())
+  arrayBuffer: async (res) => Buffer.from(await res.arrayBuffer()),
+  // For 204 responses, which have no body to parse.
+  none: () => null
 }
 
 async function request (path, { method = 'GET', body, expected = [], responseType = 'json' } = {}) {
@@ -52,12 +54,34 @@ async function getDocumentManifest (id) {
   })
 }
 
+async function getDocumentContent (id) {
+  return request(`/guidance/documents/${id}/content`, {
+    responseType: 'text',
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
 async function getDocumentSection (id, sectionNumber) {
   return request(
     `/guidance/documents/${id}/sections/${encodeURIComponent(sectionNumber)}`,
     {
       responseType: 'text',
       expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+    }
+  )
+}
+
+async function updateDocumentSection (id, sectionNumber, { heading, markdown }) {
+  return request(
+    `/guidance/documents/${id}/sections/${encodeURIComponent(sectionNumber)}`,
+    {
+      method: 'PUT',
+      body: { heading, markdown },
+      responseType: 'none',
+      expected: [
+        http2StatusCodes.HTTP_STATUS_NOT_FOUND,
+        http2StatusCodes.HTTP_STATUS_UNPROCESSABLE_ENTITY
+      ]
     }
   )
 }
@@ -70,6 +94,21 @@ async function getDocumentImage (documentId, filename) {
       expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
     }
   )
+}
+
+async function listSummaries () {
+  return request('/guidance/summaries/')
+}
+
+async function rebuildSummaries (documentIds) {
+  return request('/guidance/summaries/rebuild', {
+    method: 'POST',
+    body: { documentIds }
+  })
+}
+
+async function searchGuidance (query) {
+  return request(`/guidance/search/?q=${encodeURIComponent(query)}`)
 }
 
 async function initiateUpload (payload) {
@@ -122,9 +161,14 @@ async function getFeedbackForFinding (jobId, findingIndex) {
 
 export {
   listDocuments,
+  listSummaries,
+  rebuildSummaries,
+  searchGuidance,
   getDocument,
   getDocumentManifest,
+  getDocumentContent,
   getDocumentSection,
+  updateDocumentSection,
   getDocumentImage,
   initiateUpload,
   startAnalysis,

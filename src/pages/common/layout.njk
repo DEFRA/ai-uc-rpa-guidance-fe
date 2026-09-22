@@ -69,4 +69,5 @@
 
 {% block bodyEnd %}
   <script type="module" src="{{ getAssetPath('src/client/javascripts/application.js') }}"></script>
+  {% block pageScripts %}{% endblock %}
 {% endblock %}

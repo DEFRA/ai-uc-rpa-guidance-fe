@@ -1,0 +1,53 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = 'Search index admin' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      {% if errorMessage %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [{ text: errorMessage, href: "#documentIds" }]
+        }) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-xl">Search index admin</h1>
+
+      {{ govukWarningText({
+        text: "Rebuilding discards the whole index first, so it ends up holding only the documents selected here. Each one is summarised by the model, which takes a few seconds; the page waits for all of them.",
+        iconFallbackText: "Warning"
+      }) }}
+
+      {% if documents | length %}
+        <form method="post" action="/admin/search-index/rebuild">
+          {{ govukCheckboxes({
+            name: "documentIds",
+            fieldset: {
+              legend: {
+                text: "Documents to index",
+                classes: "govuk-fieldset__legend--m"
+              }
+            },
+            hint: {
+              text: "Every guidance document held by the service."
+            },
+            items: documents,
+            errorMessage: errorMessage and { text: errorMessage }
+          }) }}
+
+          {{ govukButton({ text: "Rebuild index" }) }}
+        </form>
+      {% else %}
+        <p class="govuk-body">There are no guidance documents to index.</p>
+      {% endif %}
+
+    </main>
+  </div>
+{% endblock %}

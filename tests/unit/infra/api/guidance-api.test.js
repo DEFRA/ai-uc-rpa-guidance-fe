@@ -55,6 +55,65 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#listSummaries', () => {
+    test('Should GET /guidance/summaries/', async () => {
+      const data = { items: [], failures: [] }
+      fetchMock.mockResponseOnce(JSON.stringify(data), { status: 200 })
+
+      const res = await guidanceApi.listSummaries()
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toEqual(data)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/summaries/',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+  })
+
+  describe('#rebuildSummaries', () => {
+    test('Should POST the selected document ids', async () => {
+      fetchMock.mockResponseOnce(
+        JSON.stringify({ items: [], failures: [] }),
+        { status: 200 }
+      )
+
+      await guidanceApi.rebuildSummaries(['doc-1', 'doc-2'])
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/summaries/rebuild',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ documentIds: ['doc-1', 'doc-2'] })
+        })
+      )
+    })
+
+    test('Should throw on non-OK response', async () => {
+      fetchMock.mockResponseOnce('', { status: 500, statusText: 'Server Error' })
+
+      await expect(guidanceApi.rebuildSummaries([])).rejects.toThrow(
+        'Guidance API POST /guidance/summaries/rebuild failed: 500 Server Error'
+      )
+    })
+  })
+
+  describe('#searchGuidance', () => {
+    test('Should GET /guidance/search with the query encoded', async () => {
+      fetchMock.mockResponseOnce(
+        JSON.stringify({ query: 'sda', results: [], indexedDocuments: 3 }),
+        { status: 200 }
+      )
+
+      await guidanceApi.searchGuidance('sda status & more')
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/search/?q=sda%20status%20%26%20more',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+  })
+
   describe('#getDocument', () => {
     test('Should GET /guidance/documents/:id and return envelope', async () => {
       const doc = { id: 'doc-1', title: 'Test', status: 'complete' }
@@ -116,6 +175,30 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#getDocumentContent', () => {
+    test('Should GET the whole document as text', async () => {
+      fetchMock.mockResponseOnce('# A Guide\n\nBody.', { status: 200 })
+
+      const res = await guidanceApi.getDocumentContent('doc-1')
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toBe('# A Guide\n\nBody.')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/content',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should report a document with no stored content as not found', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getDocumentContent('doc-1')
+
+      expect(res.ok).toBe(false)
+      expect(res.data).toBeNull()
+    })
+  })
+
   describe('#getDocumentSection', () => {
     test('Should GET the section as text/markdown', async () => {
       fetchMock.mockResponseOnce('## 1 Intro\n\nContent.', {
@@ -139,6 +222,96 @@ describe('#guidanceApi', () => {
 
       expect(res.ok).toBe(false)
       expect(res.status).toBe(404)
+    })
+  })
+
+  describe('#updateDocumentSection', () => {
+    test('Should PUT the heading and markdown as JSON', async () => {
+      fetchMock.mockResponseOnce(null, { status: 204 })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '7.2', {
+        heading: 'Email — case note template',
+        markdown: 'SBI is correct.'
+      })
+
+      expect(res.ok).toBe(true)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/sections/7.2',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            heading: 'Email — case note template',
+            markdown: 'SBI is correct.'
+          })
+        })
+      )
+    })
+
+    test('Should not attempt to parse the empty 204 body', async () => {
+      fetchMock.mockResponseOnce(null, { status: 204 })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '1', {
+        heading: 'Overview',
+        markdown: 'Text.'
+      })
+
+      expect(res.data).toBeNull()
+    })
+
+    test('Should encode the section number in the path', async () => {
+      fetchMock.mockResponseOnce(null, { status: 204 })
+
+      await guidanceApi.updateDocumentSection('doc-1', '1.2.3', {
+        heading: 'Deep',
+        markdown: 'Text.'
+      })
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/documents/doc-1/sections/1.2.3',
+        expect.objectContaining({ method: 'PUT' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '99', {
+        heading: 'Missing',
+        markdown: 'Text.'
+      })
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+
+    test('Should return { ok: false } on 422 without throwing', async () => {
+      fetchMock.mockResponseOnce('', {
+        status: 422,
+        statusText: 'Unprocessable Content'
+      })
+
+      const res = await guidanceApi.updateDocumentSection('doc-1', '1', {
+        heading: '',
+        markdown: 'Text.'
+      })
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(422)
+    })
+
+    test('Should throw on unexpected non-OK response', async () => {
+      fetchMock.mockResponseOnce('', {
+        status: 503,
+        statusText: 'Service Unavailable'
+      })
+
+      await expect(
+        guidanceApi.updateDocumentSection('doc-1', '1', {
+          heading: 'Overview',
+          markdown: 'Text.'
+        })
+      ).rejects.toMatchObject({ statusCode: 503 })
     })
   })
 

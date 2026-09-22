@@ -1,0 +1,74 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+
+{% set page = 'guidance-documents' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+
+          {% if errorList.length %}
+            {{ govukErrorSummary({
+              titleText: "There is a problem",
+              errorList: errorList
+            }) }}
+          {% endif %}
+
+          <span class="govuk-caption-l">Section {{ sectionNumber }}</span>
+          <h1 class="govuk-heading-l">Edit this section</h1>
+
+          <form method="post" action="{{ formAction }}">
+            {{ govukInput({
+              id: "heading",
+              name: "heading",
+              value: heading,
+              label: {
+                text: "Heading",
+                classes: "govuk-label--s"
+              },
+              hint: {
+                text: "The section number " + sectionNumber + " stays as it is and cannot be changed here."
+              },
+              errorMessage: errors.heading and { text: errors.heading }
+            }) }}
+
+            {{ govukTextarea({
+              id: "markdown",
+              name: "markdown",
+              value: bodyMarkdown,
+              rows: 20,
+              label: {
+                text: "Content",
+                classes: "govuk-label--s"
+              },
+              hint: {
+                text: "Written in Markdown. Do not repeat the heading here."
+              },
+              attributes: {
+                "data-module": "guidance-editor",
+                "data-document-id": documentId
+              },
+              errorMessage: errors.markdown and { text: errors.markdown }
+            }) }}
+
+            <div class="govuk-button-group">
+              {{ govukButton({ text: "Save section" }) }}
+              <a class="govuk-link" href="{{ cancelHref }}">Cancel</a>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </main>
+  </div>
+{% endblock %}
+
+{% block pageScripts %}
+  <script type="module" src="{{ getAssetPath('src/client/javascripts/guidance-editor.js') }}"></script>
+{% endblock %}

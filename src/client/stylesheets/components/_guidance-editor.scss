@@ -1,0 +1,232 @@
+@use 'govuk-frontend' as *;
+
+// ProseMirror's base rules, copied from prosemirror-view/style/prosemirror.css
+// rather than imported: importing CSS from the JS entry would make Vite emit a
+// second stylesheet, and the manifest's `css` array is not exposed by the
+// getAssetPath helper.
+//
+// The class names and element-qualified selectors below are the library's own
+// and cannot be renamed, so the GDS naming rules are switched off for this block
+// only.
+// stylelint-disable scss/selector-class-pattern, selector-no-qualifying-type
+.ProseMirror {
+  position: relative;
+  overflow-wrap: break-word;
+  white-space: break-spaces;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0;
+}
+
+.ProseMirror pre {
+  white-space: pre-wrap;
+}
+
+.ProseMirror li {
+  position: relative;
+}
+
+.ProseMirror-hideselection *::selection {
+  background: transparent;
+}
+
+.ProseMirror-hideselection {
+  caret-color: transparent;
+}
+
+.ProseMirror [draggable][contenteditable='false'] {
+  user-select: text;
+}
+
+.ProseMirror-selectednode {
+  outline: 2px solid $govuk-focus-colour;
+}
+
+li.ProseMirror-selectednode {
+  outline: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -2px -2px -2px -32px;
+    border: 2px solid $govuk-focus-colour;
+    pointer-events: none;
+  }
+}
+
+// Overriding the library's own !important declarations requires !important.
+img.ProseMirror-separator {
+  display: inline !important; // stylelint-disable-line declaration-no-important
+  border: none !important; // stylelint-disable-line declaration-no-important
+  margin: 0 !important; // stylelint-disable-line declaration-no-important
+}
+// stylelint-enable scss/selector-class-pattern, selector-no-qualifying-type
+
+// The editor itself, styled to sit in a GOV.UK form.
+.app-editor {
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  margin-bottom: govuk-spacing(2);
+}
+
+.app-editor__button {
+  margin-bottom: 0;
+}
+
+.app-editor__content {
+  padding: govuk-spacing(2);
+  border: 2px solid $govuk-input-border-colour;
+  background-color: govuk-colour('white');
+
+  // The editable region suppresses its own outline, so the container shows focus.
+  &:focus-within {
+    outline: 3px solid $govuk-focus-colour;
+    outline-offset: 0;
+  }
+
+  .ProseMirror { // stylelint-disable-line scss/selector-class-pattern
+    @include govuk-font($size: 19);
+
+    min-height: 20em;
+    outline: none;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  mark {
+    background-color: govuk-colour('yellow');
+  }
+
+  table {
+    width: 100%;
+    margin-bottom: govuk-spacing(4);
+    border-collapse: collapse;
+
+    td,
+    th {
+      padding: govuk-spacing(1);
+      border: 1px solid $govuk-border-colour;
+    }
+  }
+}
+
+// The whole-document editor. The pane is capped and scrolls internally, so the
+// page itself never grows and the toolbar stays on screen however long the
+// document is; `position: sticky` covers short viewports as well.
+.app-document-editor {
+  .app-editor__toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-bottom: 0;
+    padding: govuk-spacing(2);
+    background-color: govuk-colour('white');
+    border: 1px solid $govuk-border-colour;
+    border-bottom: 0;
+  }
+
+  .app-editor__content {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  // The container owns the height here, so the editable region must not force
+  // its own minimum on top of it.
+  .ProseMirror { // stylelint-disable-line scss/selector-class-pattern
+    min-height: 0;
+  }
+}
+
+// Toolbar buttons are grouped so a long toolbar wraps into meaningful clusters
+// rather than an undifferentiated run of buttons.
+.app-editor__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(1);
+  align-items: center;
+  padding-right: govuk-spacing(2);
+  border-right: 1px solid $govuk-border-colour;
+
+  &:last-child {
+    padding-right: 0;
+    border-right: 0;
+  }
+}
+
+// GOV.UK buttons at full size are far too heavy for a toolbar this long.
+.app-editor__button--compact {
+  @include govuk-font($size: 16);
+
+  margin-bottom: 0;
+  padding: govuk-spacing(1) govuk-spacing(2);
+}
+
+// Colour swatches carry their colour as a class rather than an inline `style`
+// attribute: `style-src 'self'` has no 'unsafe-inline', so an inline style
+// would be dropped.
+.app-editor__swatch {
+  width: 30px;
+  min-width: 0;
+  height: 30px;
+  padding: 0;
+  border: 1px solid $govuk-border-colour;
+  box-shadow: none;
+}
+
+.app-editor__swatch--red {
+  background-color: govuk-colour('red');
+}
+
+.app-editor__swatch--blue {
+  background-color: govuk-colour('blue');
+}
+
+.app-editor__swatch--green {
+  background-color: govuk-colour('green');
+}
+
+.app-editor__swatch--black {
+  background-color: govuk-colour('black');
+}
+
+.app-editor__swatch--yellow {
+  background-color: govuk-colour('yellow');
+}
+
+// Text colour is applied by class rather than by the inline style the TipTap
+// extension emits, because `style-src` carries no 'unsafe-inline'.
+.app-editor__text--red {
+  color: govuk-colour('red');
+}
+
+.app-editor__text--blue {
+  color: govuk-colour('blue');
+}
+
+.app-editor__text--green {
+  color: govuk-colour('green');
+}
+
+.app-editor__text--black {
+  color: govuk-colour('black');
+}
+
+// The Markdown source sits under the editor as a second view of one document,
+// so it reads as part of the same control rather than a stray form field.
+.app-editor__source-caption {
+  @include govuk-font($size: 16, $weight: bold);
+
+  margin: govuk-spacing(3) 0 govuk-spacing(1);
+}
+
+.app-editor__source {
+  @include govuk-font($size: 16);
+
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", menlo, consolas, monospace;
+}

@@ -30,6 +30,43 @@ describe('guidance-documents service', () => {
     })
   })
 
+  describe('#listAllGuidanceDocuments', () => {
+    test('Should ask for one page holding the whole corpus', async () => {
+      guidanceApi.listDocuments.mockResolvedValueOnce({
+        ok: true,
+        data: { items: [{ id: 'doc-1' }], total: 1, page: 1, pageSize: 100 }
+      })
+
+      const result = await guidanceService.listAllGuidanceDocuments()
+
+      expect(result.map(d => d.id)).toEqual(['doc-1'])
+      expect(guidanceApi.listDocuments).toHaveBeenCalledWith(1, 100)
+    })
+
+    test('Should propagate unexpected errors', async () => {
+      guidanceApi.listDocuments.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(guidanceService.listAllGuidanceDocuments()).rejects.toThrow('Network error')
+    })
+  })
+
+  describe('#getDocumentContent', () => {
+    test('Should return the stored Markdown', async () => {
+      guidanceApi.getDocumentContent.mockResolvedValueOnce({
+        ok: true,
+        data: '# A Guide'
+      })
+
+      expect(await guidanceService.getDocumentContent('doc-1')).toBe('# A Guide')
+    })
+
+    test('Should return null for a document with no stored content', async () => {
+      guidanceApi.getDocumentContent.mockResolvedValueOnce({ ok: false, data: null })
+
+      expect(await guidanceService.getDocumentContent('doc-1')).toBeNull()
+    })
+  })
+
   describe('#getCompleteDocuments', () => {
     test('Should return only documents with status complete', async () => {
       guidanceApi.listDocuments.mockResolvedValueOnce({
@@ -139,6 +176,51 @@ describe('guidance-documents service', () => {
       guidanceApi.getDocumentSection.mockResolvedValueOnce({ ok: false, status: 404, data: null })
 
       expect(await guidanceService.getDocumentSection('doc-1', '99')).toBeNull()
+    })
+  })
+
+  describe('#updateDocumentSection', () => {
+    const edit = { heading: 'Email — case note template', markdown: 'SBI is correct.' }
+
+    test('Should report success on 204', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: true, status: 204, data: null })
+
+      const outcome = await guidanceService.updateDocumentSection('doc-1', '7.2', edit)
+
+      expect(outcome.succeeded).toBe(true)
+      expect(outcome.reason).toBeNull()
+    })
+
+    test('Should pass the edit through to the api layer', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: true, status: 204, data: null })
+
+      await guidanceService.updateDocumentSection('doc-1', '7.2', edit)
+
+      expect(guidanceApi.updateDocumentSection).toHaveBeenCalledWith('doc-1', '7.2', edit)
+    })
+
+    test('Should report not_found on 404', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: false, status: 404, data: null })
+
+      const outcome = await guidanceService.updateDocumentSection('doc-1', '99', edit)
+
+      expect(outcome.succeeded).toBe(false)
+      expect(outcome.reason).toBe('not_found')
+    })
+
+    test('Should report invalid on 422', async () => {
+      guidanceApi.updateDocumentSection.mockResolvedValueOnce({ ok: false, status: 422, data: null })
+
+      const outcome = await guidanceService.updateDocumentSection('doc-1', '1', { heading: '', markdown: '' })
+
+      expect(outcome.succeeded).toBe(false)
+      expect(outcome.reason).toBe('invalid')
+    })
+
+    test('Should propagate unexpected errors', async () => {
+      guidanceApi.updateDocumentSection.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(guidanceService.updateDocumentSection('doc-1', '1', edit)).rejects.toThrow('Network error')
     })
   })
 

@@ -1,5 +1,8 @@
 {% extends "common/layout.njk" %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
 {% set pageTitle = 'Guidance documents' %}
 {% set page = 'guidance-documents' %}
 
@@ -7,6 +10,24 @@
   <div class="govuk-width-container">
     <main class="govuk-main-wrapper" id="main-content" role="main">
       <h1 class="govuk-heading-xl">Guidance documents</h1>
+
+      <form method="get" action="/guidance-documents/search" class="govuk-!-margin-bottom-6">
+        {{ govukInput({
+          id: "q",
+          name: "q",
+          type: "search",
+          label: {
+            text: "Find guidance",
+            classes: "govuk-label--m"
+          },
+          hint: {
+            text: "Search by title or by any words the document contains."
+          },
+          classes: "govuk-!-width-two-thirds"
+        }) }}
+
+        {{ govukButton({ text: "Search" }) }}
+      </form>
 
       {% if documents | length %}
         <table class="govuk-table">
@@ -25,6 +46,11 @@
                     <a class="govuk-link app-guidance-doc-link" href="/guidance-documents/{{ doc.id }}/view">
                       {{ doc.title or doc.filename or 'Untitled' }}
                     </a>
+                    {{ govukButton({
+                      text: "Edit",
+                      href: "/guidance-documents/" + doc.id + "/edit",
+                      classes: "govuk-button--secondary govuk-!-margin-bottom-0 govuk-!-margin-left-2"
+                    }) }}
                   {% else %}
                     {{ doc.title or doc.filename or 'Untitled' }}
                   {% endif %}

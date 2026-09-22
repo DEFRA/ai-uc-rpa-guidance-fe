@@ -1,0 +1,107 @@
+// A stored section file always opens with a generated heading line of the form
+// "## {number} {heading}". The editor presents the heading text and the body as
+// separate controls, so the two have to be pulled apart for display; the backend
+// composes the line again on save, which is why there is no inverse here.
+// No `$`: `.*` already runs to the end of the line, and anchoring it made the
+// engine backtrack across the whitespace the capture could also have matched.
+const HEADING_LINE = /^#{1,6}[ \t]+(.*)/
+
+// Only ASCII layout whitespace is trimmed. String.trim() would also strip
+// U+00A0, but a non-breaking space is a character the author chose, and
+// Word-derived guidance is full of them.
+const LAYOUT_WHITESPACE = ' \t\r\n'
+
+/**
+ * Trim layout whitespace without touching content characters.
+ *
+ * Walked rather than matched: an anchored `[ \t\r\n]+$` rescans the whole run
+ * of whitespace from every starting position when the line does not end in
+ * whitespace, which is quadratic in the length of the run.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function trimLayoutWhitespace (text) {
+  let start = 0
+  let end = text.length
+
+  while (start < end && LAYOUT_WHITESPACE.includes(text[start])) {
+    start += 1
+  }
+
+  while (end > start && LAYOUT_WHITESPACE.includes(text[end - 1])) {
+    end -= 1
+  }
+
+  return text.slice(start, end)
+}
+
+/**
+ * Remove exactly one leading section number from a heading line.
+ *
+ * Exactly one, because a heading may legitimately begin with a number: section 7
+ * headed "7 day rule" is stored as "## 7 7 day rule", and removing more would
+ * corrupt it.
+ *
+ * @param {string} text The heading line with its hashes already removed.
+ * @param {string} sectionNumber The number this section is known by.
+ * @returns {string} The heading text alone.
+ */
+function stripSectionNumber (text, sectionNumber) {
+  if (text.startsWith(`${sectionNumber} `)) {
+    return trimLayoutWhitespace(text.slice(sectionNumber.length + 1))
+  }
+
+  return text === sectionNumber ? '' : text
+}
+
+/**
+ * Split a stored section file into its editable heading text and body.
+ *
+ * @param {string} markdown The raw section file as stored.
+ * @param {string} sectionNumber The number this section is known by.
+ * @returns {{ heading: string|null, body: string }} `heading` is null when the
+ *   file has no heading line, leaving the caller to fall back to the manifest.
+ */
+function splitSectionMarkdown (markdown, sectionNumber) {
+  const normalised = markdown.replace(/\r\n?/g, '\n')
+  const [firstLine, ...remainingLines] = normalised.split('\n')
+  const headingLine = HEADING_LINE.exec(firstLine)
+
+  if (!headingLine) {
+    return { heading: null, body: trimLayoutWhitespace(normalised) }
+  }
+
+  return {
+    heading: stripSectionNumber(trimLayoutWhitespace(headingLine[1]), sectionNumber),
+    body: trimLayoutWhitespace(remainingLines.join('\n'))
+  }
+}
+
+/**
+ * Split a stored document file into its editable title and body.
+ *
+ * The whole-document file opens with "# {title}" (see the backend's
+ * `to_markdown`). Unlike a section heading there is no number to strip: a
+ * document title is whatever the author wrote.
+ *
+ * @param {string} markdown The raw document file as stored.
+ * @returns {{ title: string|null, body: string }} `title` is null when the file
+ *   has no heading line, leaving the caller to fall back to the manifest.
+ */
+function splitDocumentMarkdown (markdown) {
+  const normalised = markdown.replace(/\r\n?/g, '\n')
+  const [firstLine, ...remainingLines] = normalised.split('\n')
+  const headingLine = HEADING_LINE.exec(firstLine)
+
+  if (!headingLine) {
+    return { title: null, body: trimLayoutWhitespace(normalised) }
+  }
+
+  return {
+    title: trimLayoutWhitespace(headingLine[1]),
+    body: trimLayoutWhitespace(remainingLines.join('\n'))
+  }
+}
+
+export { splitSectionMarkdown, splitDocumentMarkdown }
