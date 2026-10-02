@@ -202,6 +202,40 @@ describe('#prototypeGuidesAdminController', () => {
     })
   })
 
+  describe('Purge from another site', () => {
+    test.each([
+      ['Sec-Fetch-Site says cross-site', { 'sec-fetch-site': 'cross-site' }],
+      ['Sec-Fetch-Site says same-site', { 'sec-fetch-site': 'same-site' }],
+      ['Origin names another host', { origin: 'https://evil.example' }],
+      ['Origin is unparseable', { origin: 'null' }]
+    ])('Should refuse when %s', async (_case, headers) => {
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/admin/prototype-guides/purge',
+        headers
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_FORBIDDEN)
+      expect(mockPurge).not.toHaveBeenCalled()
+    })
+
+    test.each([
+      ['Sec-Fetch-Site says same-origin', { 'sec-fetch-site': 'same-origin' }],
+      ['Origin names this host', { origin: 'http://localhost:3000', host: 'localhost:3000' }]
+    ])('Should purge when %s', async (_case, headers) => {
+      mockPurge.mockResolvedValueOnce({ ok: true, data: { deleted: 3 } })
+
+      const { statusCode } = await server.inject({
+        method: 'POST',
+        url: '/admin/prototype-guides/purge',
+        headers
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
+      expect(mockPurge).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('Upload', () => {
     test('Should open an upload session that returns to the list', async () => {
       mockInitiateUpload.mockResolvedValueOnce({ ok: true, data: { uploadId: 'upload-123' } })

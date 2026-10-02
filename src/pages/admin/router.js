@@ -11,6 +11,24 @@ const prototypeGuideNotFound = (_request, _h, err) => {
   throw Boom.notFound('Prototype guide not found', err)
 }
 
+// Purging cannot be undone, so refuse a request another site made the
+// browser send. Browsers say where a request came from in Sec-Fetch-Site, or
+// in Origin if older; a request with neither did not come from a browser.
+const sameOriginOnly = (request, h) => {
+  const site = request.headers['sec-fetch-site']
+  const origin = request.headers.origin
+
+  const crossSite = site
+    ? site !== 'same-origin'
+    : Boolean(origin) && URL.parse(origin)?.host !== request.info.host
+
+  if (crossSite) {
+    throw Boom.forbidden('Cross-site request refused')
+  }
+
+  return h.continue
+}
+
 // A rebuild discards the index before it builds, so an empty selection would
 // empty the index. It is a mis-click, not an instruction: reject it.
 const rebuildPayload = Joi.object({
@@ -74,7 +92,10 @@ const routes = [
   {
     method: 'POST',
     path: '/admin/prototype-guides/purge',
-    handler: prototypeGuidesController.postPurge
+    handler: prototypeGuidesController.postPurge,
+    options: {
+      pre: [{ method: sameOriginOnly }]
+    }
   },
   {
     method: 'POST',
