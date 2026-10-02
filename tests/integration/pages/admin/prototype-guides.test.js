@@ -76,6 +76,23 @@ describe('#prototypeGuidesAdminController', () => {
       expect(payload).toContain('1 Oct 2026, 15:28')
     })
 
+    test('Should encode a document id so it cannot inject markup into the list', async () => {
+      const hostileId = '"><img src=x onerror=alert(1)>'
+      mockGetManifest.mockResolvedValueOnce({
+        ok: true,
+        data: { 'claims-guide': { ...manifest['claims-guide'], documentId: hostileId } }
+      })
+
+      const { statusCode, payload } = await server.inject({
+        method: 'GET',
+        url: '/admin/prototype-guides'
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(payload).not.toContain('<img src=x')
+      expect(payload).toContain(`href="/admin/prototype-guides/${encodeURIComponent(hostileId)}"`)
+    })
+
     test('Should list a guide whose manifest has no dates', async () => {
       const { createdAt, updatedAt, ...undated } = manifest['claims-guide'].versions[0]
       mockGetManifest.mockResolvedValueOnce({

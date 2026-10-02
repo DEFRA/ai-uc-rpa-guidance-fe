@@ -63,7 +63,8 @@ function updatedOf (guide) {
  * @returns {string}
  */
 function guideHref (documentId) {
-  return `${LIST_HREF}/${documentId}`
+  // Encoded: the id comes from the manifest, and the list puts this into raw HTML.
+  return `${LIST_HREF}/${encodeURIComponent(documentId)}`
 }
 
 /**
