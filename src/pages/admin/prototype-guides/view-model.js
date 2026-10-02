@@ -26,12 +26,36 @@ const dateFormat = new Intl.DateTimeFormat('en-GB', {
 })
 
 /**
- * @param {string} value
+ * @param {string | null | undefined} value
  * @returns {string}
  */
 function formatDate (value) {
+  if (!value) {
+    return MISSING
+  }
+
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : dateFormat.format(date)
+}
+
+// Both dates are optional in the manifest; a guide's own are preferred, then
+// its latest version's, since older manifests carry only some of them.
+
+/**
+ * @param {object} guide A manifest entry.
+ * @returns {string}
+ */
+function createdOf (guide) {
+  return formatDate(guide.createdAt ?? guide.versions?.[0]?.createdAt)
+}
+
+/**
+ * @param {object} guide A manifest entry.
+ * @returns {string}
+ */
+function updatedOf (guide) {
+  const latest = latestVersionOf(guide)
+  return formatDate(guide.updatedAt ?? latest?.updatedAt ?? latest?.createdAt)
 }
 
 /**
@@ -105,7 +129,7 @@ function prototypeGuidesViewModel (guides, outcome = {}) {
         { text: String(guide.latestVersion), format: 'numeric' },
         { text: latest ? String(latest.sections) : MISSING, format: 'numeric' },
         { text: latest ? String(latest.images) : MISSING, format: 'numeric' },
-        { text: latest ? formatDate(latest.createdAt) : MISSING }
+        { text: updatedOf(guide) }
       ]
     }),
     breadcrumbs: [homeCrumb]
@@ -137,7 +161,8 @@ function prototypeGuideViewModel ({ guide, markdown }) {
       { key: { text: 'Document ID' }, value: { text: guide.documentId } },
       { key: { text: 'Latest version' }, value: { text: `${guide.latestVersion} (${latest?.versionId ?? 'missing'})` } },
       { key: { text: 'Versions' }, value: { text: String(guide.versions?.length ?? 0) } },
-      { key: { text: 'Created' }, value: { text: latest ? formatDate(latest.createdAt) : MISSING } },
+      { key: { text: 'Created' }, value: { text: createdOf(guide) } },
+      { key: { text: 'Updated' }, value: { text: updatedOf(guide) } },
       { key: { text: 'Sections' }, value: { text: latest ? String(latest.sections) : MISSING } },
       { key: { text: 'Images' }, value: { text: latest ? String(latest.images) : MISSING } }
     ],

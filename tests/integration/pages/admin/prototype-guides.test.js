@@ -33,6 +33,7 @@ const manifest = {
         version: 1,
         versionId: VERSION_ID,
         createdAt: '2026-10-01T14:28:05Z',
+        updatedAt: '2026-10-01T14:28:05Z',
         sections: 4,
         images: 10,
         contentUrl: `${DOCUMENT_ID}/${VERSION_ID}/content.md`
@@ -72,6 +73,23 @@ describe('#prototypeGuidesAdminController', () => {
       expect(payload).toContain(`href="/admin/prototype-guides/${DOCUMENT_ID}"`)
       expect(payload).toContain('Claims Guide')
       expect(payload).toContain('claims-guide')
+      expect(payload).toContain('1 Oct 2026, 15:28')
+    })
+
+    test('Should list a guide whose manifest has no dates', async () => {
+      const { createdAt, updatedAt, ...undated } = manifest['claims-guide'].versions[0]
+      mockGetManifest.mockResolvedValueOnce({
+        ok: true,
+        data: { 'claims-guide': { ...manifest['claims-guide'], versions: [undated] } }
+      })
+
+      const { statusCode, payload } = await server.inject({
+        method: 'GET',
+        url: '/admin/prototype-guides'
+      })
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(payload).toContain('Claims Guide')
     })
 
     test('Should say nothing is loaded when the API has no manifest', async () => {
