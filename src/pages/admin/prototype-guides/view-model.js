@@ -6,10 +6,13 @@ import { homeCrumb } from '../../common/breadcrumbs.js'
 
 const LIST_HREF = '/admin/prototype-guides'
 
+// What a cell shows when the manifest has no entry for its version.
+const MISSING = '-'
+
 // The converter writes a guide's pictures relative to its content.md
 // ("../assets/<digest>.png"), which only resolves against the bucket's own
 // layout. This app proxies them on its own route instead.
-const ASSET_REFERENCE = /(\]\(|src=")(?:\.{1,2}\/)?assets\//g
+const ASSET_REFERENCE = /(]\(|src=")(?:\.{1,2}\/)?assets\//g
 
 // The converter opens every guide with its title as the one level-1 heading,
 // and the manifest's title is read from it.
@@ -99,9 +102,9 @@ function prototypeGuidesViewModel (guides, outcome = {}) {
         { html: `<a class="govuk-link" href="${guideHref(guide.documentId)}">${escapeHtml(guide.title)}</a>` },
         { text: guide.name },
         { text: String(guide.latestVersion), format: 'numeric' },
-        { text: latest ? String(latest.sections) : '-', format: 'numeric' },
-        { text: latest ? String(latest.images) : '-', format: 'numeric' },
-        { text: latest ? formatDate(latest.createdAt) : '-' }
+        { text: latest ? String(latest.sections) : MISSING, format: 'numeric' },
+        { text: latest ? String(latest.images) : MISSING, format: 'numeric' },
+        { text: latest ? formatDate(latest.createdAt) : MISSING }
       ]
     }),
     breadcrumbs: [homeCrumb]
@@ -133,9 +136,9 @@ function prototypeGuideViewModel ({ guide, markdown }) {
       { key: { text: 'Document ID' }, value: { text: guide.documentId } },
       { key: { text: 'Latest version' }, value: { text: `${guide.latestVersion} (${latest?.versionId ?? 'missing'})` } },
       { key: { text: 'Versions' }, value: { text: String(guide.versions?.length ?? 0) } },
-      { key: { text: 'Created' }, value: { text: latest ? formatDate(latest.createdAt) : '-' } },
-      { key: { text: 'Sections' }, value: { text: latest ? String(latest.sections) : '-' } },
-      { key: { text: 'Images' }, value: { text: latest ? String(latest.images) : '-' } }
+      { key: { text: 'Created' }, value: { text: latest ? formatDate(latest.createdAt) : MISSING } },
+      { key: { text: 'Sections' }, value: { text: latest ? String(latest.sections) : MISSING } },
+      { key: { text: 'Images' }, value: { text: latest ? String(latest.images) : MISSING } }
     ],
     breadcrumbs: [
       homeCrumb,
