@@ -5,6 +5,7 @@ import { sanitiseGuidanceHtml } from '../../../infra/markdown/sanitise.js'
 import { homeCrumb } from '../../common/breadcrumbs.js'
 
 const LIST_HREF = '/admin/prototype-guides'
+const LIST_TITLE = 'Prototype guidance admin'
 
 // What a cell shows when the manifest has no entry for its version.
 const MISSING = '-'
@@ -69,7 +70,7 @@ function notificationFor ({ purged, uploaded }) {
     return {
       html: '<p class="govuk-notification-banner__heading">Your zip file has been uploaded</p>' +
         '<p class="govuk-body">It is being virus scanned and unpacked. ' +
-        '<a class="govuk-notification-banner__link" href="' + LIST_HREF + '">Refresh this page</a> ' +
+        `<a class="govuk-notification-banner__link" href="${LIST_HREF}">Refresh this page</a> ` +
         'in a minute to see the new guides.</p>'
     }
   }
@@ -92,7 +93,7 @@ function notificationFor ({ purged, uploaded }) {
  */
 function prototypeGuidesViewModel (guides, outcome = {}) {
   return {
-    pageTitle: 'Prototype guidance admin',
+    pageTitle: LIST_TITLE,
     notification: notificationFor(outcome),
     hasGuides: guides.length > 0,
     rows: guides.map((guide) => {
@@ -128,7 +129,7 @@ function prototypeGuideViewModel ({ guide, markdown }) {
   )
 
   return {
-    pageTitle: `${guide.title} - Prototype guidance admin`,
+    pageTitle: `${guide.title} - ${LIST_TITLE}`,
     title: guide.title,
     contentHtml,
     details: [
@@ -142,7 +143,7 @@ function prototypeGuideViewModel ({ guide, markdown }) {
     ],
     breadcrumbs: [
       homeCrumb,
-      { text: 'Prototype guidance admin', href: LIST_HREF },
+      { text: LIST_TITLE, href: LIST_HREF },
       { text: guide.title }
     ]
   }
@@ -156,7 +157,7 @@ function purgeViewModel (guides) {
   return {
     pageTitle: 'Are you sure you want to purge all prototype guides?',
     guideCount: guides.length,
-    breadcrumbs: [homeCrumb, { text: 'Prototype guidance admin', href: LIST_HREF }]
+    breadcrumbs: [homeCrumb, { text: LIST_TITLE, href: LIST_HREF }]
   }
 }
 
@@ -168,7 +169,7 @@ function uploadViewModel (uploadUrl) {
   return {
     pageTitle: 'Upload prototype guides',
     uploadUrl,
-    breadcrumbs: [homeCrumb, { text: 'Prototype guidance admin', href: LIST_HREF }]
+    breadcrumbs: [homeCrumb, { text: LIST_TITLE, href: LIST_HREF }]
   }
 }
 
