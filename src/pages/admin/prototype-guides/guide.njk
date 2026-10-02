@@ -1,0 +1,31 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+
+          <span class="govuk-caption-l">Prototype guide</span>
+          <h1 class="govuk-heading-xl">{{ title }}</h1>
+
+          {% set detailsHtml %}
+            {{ govukSummaryList({ rows: details }) }}
+          {% endset %}
+          {{ govukDetails({
+            summaryText: "Manifest details",
+            html: detailsHtml
+          }) }}
+
+          <div class="app-guidance-content">
+            {{ contentHtml | safe }}
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+{% endblock %}

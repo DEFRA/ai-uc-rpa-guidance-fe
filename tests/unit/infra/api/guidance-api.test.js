@@ -340,6 +340,109 @@ describe('#guidanceApi', () => {
     })
   })
 
+  describe('#getPrototypeGuidesManifest', () => {
+    test('Should GET the prototype guides manifest', async () => {
+      fetchMock.mockResponseOnce(JSON.stringify({ guide: { documentId: 'doc-1' } }))
+
+      const res = await guidanceApi.getPrototypeGuidesManifest()
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toEqual({ guide: { documentId: 'doc-1' } })
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/prototype/guides/manifest',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getPrototypeGuidesManifest()
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('#getPrototypeGuideContent', () => {
+    test('Should GET the latest content as text', async () => {
+      fetchMock.mockResponseOnce('# A guide')
+
+      const res = await guidanceApi.getPrototypeGuideContent('doc-1')
+
+      expect(res.ok).toBe(true)
+      expect(res.data).toBe('# A guide')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/prototype/guides/doc-1/content',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getPrototypeGuideContent('missing')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('#getPrototypeGuideAsset', () => {
+    test('Should GET asset bytes as a Buffer', async () => {
+      fetchMock.mockResponseOnce(Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+
+      const res = await guidanceApi.getPrototypeGuideAsset('doc-1', 'abc.png')
+
+      expect(res.ok).toBe(true)
+      expect(Buffer.isBuffer(res.data)).toBe(true)
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/prototype/guides/doc-1/assets/abc.png',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getPrototypeGuideAsset('doc-1', 'missing.png')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('#purgePrototypeGuides', () => {
+    test('Should DELETE /prototype/guides', async () => {
+      fetchMock.mockResponseOnce(JSON.stringify({ deleted: 12 }))
+
+      const res = await guidanceApi.purgePrototypeGuides()
+
+      expect(res.data).toEqual({ deleted: 12 })
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/prototype/guides',
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    })
+  })
+
+  describe('#initiatePrototypeGuidesUpload', () => {
+    test('Should POST the redirect to /prototype/guides/uploads', async () => {
+      fetchMock.mockResponseOnce(JSON.stringify({ uploadId: 'upload-123' }), { status: 201 })
+
+      const res = await guidanceApi.initiatePrototypeGuidesUpload('/admin/prototype-guides')
+
+      expect(res.data).toEqual({ uploadId: 'upload-123' })
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/prototype/guides/uploads',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ redirect: '/admin/prototype-guides' })
+        })
+      )
+    })
+  })
+
   describe('#initiateUpload', () => {
     test('Should POST to /guidance/documents with payload', async () => {
       fetchMock.mockResponseOnce(

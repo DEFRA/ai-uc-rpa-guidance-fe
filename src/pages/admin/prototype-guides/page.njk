@@ -1,0 +1,75 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageTitle = 'Prototype guidance admin' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      {% if notification %}
+        {{ govukNotificationBanner(notification) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-xl">Prototype guidance admin</h1>
+
+      <p class="govuk-body-l">
+        The guides the API currently serves to the AI Hub prototype.
+      </p>
+
+      {% if rows | length %}
+        {{ govukTable({
+          caption: "Guides in the manifest",
+          captionClasses: "govuk-table__caption--m",
+          firstCellIsHeader: true,
+          head: [
+            { text: "Title" },
+            { text: "Manifest name" },
+            { text: "Latest version", format: "numeric" },
+            { text: "Sections", format: "numeric" },
+            { text: "Images", format: "numeric" },
+            { text: "Created" }
+          ],
+          rows: rows
+        }) }}
+      {% else %}
+        <p class="govuk-body">
+          No guides are loaded: the API has no prototype guides manifest.
+        </p>
+      {% endif %}
+
+      <h2 class="govuk-heading-m">Upload guides</h2>
+
+      <p class="govuk-body">
+        Upload a zip file of parsed guides. The manifest.json file must be at
+        the top level of the zip, or inside a single folder at the top level.
+      </p>
+
+      {% if hasGuides %}
+        {{ govukWarningText({
+          text: "Uploading replaces all the guides currently loaded. They will be deleted entirely and you cannot undo this.",
+          iconFallbackText: "Warning"
+        }) }}
+      {% endif %}
+
+      <form method="post" action="/admin/prototype-guides/upload">
+        <div class="govuk-button-group">
+          {{ govukButton({ text: "Upload guides" }) }}
+
+          {% if hasGuides %}
+            {{ govukButton({
+              text: "Purge all guides",
+              href: "/admin/prototype-guides/purge",
+              classes: "govuk-button--warning"
+            }) }}
+          {% endif %}
+        </div>
+      </form>
+
+    </main>
+  </div>
+{% endblock %}

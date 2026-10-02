@@ -44,6 +44,16 @@ describe('#homepageController', () => {
     expect(payload).toContain('Search index admin')
   })
 
+  test('Should contain a link to the prototype guidance admin', async () => {
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    expect(payload).toContain('/admin/prototype-guides')
+    expect(payload).toContain('Prototype guidance admin')
+  })
+
   test('Should link to the AI agent tools', async () => {
     const { payload } = await server.inject({
       method: 'GET',
