@@ -96,6 +96,37 @@ async function getDocumentImage (documentId, filename) {
   )
 }
 
+async function getPrototypeGuidesManifest () {
+  return request('/prototype/guides/manifest', {
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
+async function getPrototypeGuideContent (documentId) {
+  return request(`/prototype/guides/${encodeURIComponent(documentId)}/content`, {
+    responseType: 'text',
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
+async function getPrototypeGuideAsset (documentId, assetId) {
+  return request(
+    `/prototype/guides/${encodeURIComponent(documentId)}/assets/${encodeURIComponent(assetId)}`,
+    {
+      responseType: 'arrayBuffer',
+      expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+    }
+  )
+}
+
+async function purgePrototypeGuides () {
+  return request('/prototype/guides', { method: 'DELETE' })
+}
+
+async function initiatePrototypeGuidesUpload (redirect) {
+  return request('/prototype/guides/uploads', { method: 'POST', body: { redirect } })
+}
+
 async function listSummaries () {
   return request('/guidance/summaries/')
 }
@@ -170,6 +201,11 @@ export {
   getDocumentSection,
   updateDocumentSection,
   getDocumentImage,
+  getPrototypeGuidesManifest,
+  getPrototypeGuideContent,
+  getPrototypeGuideAsset,
+  purgePrototypeGuides,
+  initiatePrototypeGuidesUpload,
   initiateUpload,
   startAnalysis,
   getLatestAnalysis,

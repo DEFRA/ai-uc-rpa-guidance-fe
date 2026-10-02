@@ -1,0 +1,41 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+
+          <h1 class="govuk-heading-l">Are you sure you want to purge all prototype guides?</h1>
+
+          <p class="govuk-body">
+            {{ guideCount }} guide{{ 's' if guideCount != 1 }}, with every
+            version, every image and the manifest, will be deleted from the
+            bucket. The AI Hub prototype will have no guides to show until new
+            ones are uploaded.
+          </p>
+
+          {{ govukWarningText({
+            text: "You cannot undo this. The guides will be deleted entirely.",
+            iconFallbackText: "Warning"
+          }) }}
+
+          <form method="post" action="/admin/prototype-guides/purge">
+            <div class="govuk-button-group">
+              {{ govukButton({
+                text: "Purge all guides",
+                classes: "govuk-button--warning",
+                preventDoubleClick: true
+              }) }}
+              <a class="govuk-link" href="/admin/prototype-guides">Cancel</a>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </main>
+  </div>
+{% endblock %}
