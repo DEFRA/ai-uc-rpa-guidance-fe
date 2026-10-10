@@ -42,6 +42,27 @@ async function getPrototypeGuide (documentId) {
 }
 
 /**
+ * A guide's manifest entry and the Markdown of one section of its latest
+ * version, or null if either is missing.
+ *
+ * @param {string} documentId
+ * @param {string} sectionNumber
+ * @returns {Promise<{ guide: object, markdown: string } | null>}
+ */
+async function getPrototypeGuideSection (documentId, sectionNumber) {
+  const guides = await listPrototypeGuides()
+  const guide = guides.find((candidate) => candidate.documentId === documentId)
+
+  if (!guide) {
+    return null
+  }
+
+  const res = await guidanceApi.getPrototypeGuideSection(documentId, sectionNumber)
+
+  return res.ok ? { guide, markdown: res.data } : null
+}
+
+/**
  * @param {string} documentId
  * @param {string} assetId
  * @returns {Promise<Buffer | null>}
@@ -75,6 +96,7 @@ async function startPrototypeGuidesUpload (redirect) {
 export {
   listPrototypeGuides,
   getPrototypeGuide,
+  getPrototypeGuideSection,
   getPrototypeGuideAsset,
   purgePrototypeGuides,
   startPrototypeGuidesUpload

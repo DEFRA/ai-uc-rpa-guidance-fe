@@ -1,0 +1,50 @@
+{# The answer and results of a guidance search, for a page that sets query,
+   answer, results and searched. #}
+{% if searched %}
+  {% if answer %}
+    <div class="govuk-inset-text">
+      <h2 class="govuk-heading-m govuk-!-margin-bottom-2">AI summary</h2>
+      <p class="govuk-body">{{ answer.answer }}</p>
+
+      {% if answer.cited | length %}
+        <p class="govuk-body-s govuk-!-margin-bottom-0">
+          Taken from:
+          {%- for result in answer.cited %}
+            <a class="govuk-link" href="{{ result.startPath }}">
+              {%- if result.sectionNumber %}{{ result.sectionNumber }} {{ result.heading }}{% else %}{{ result.documentTitle }}{% endif -%}
+            </a>{{ "," if not loop.last }}
+          {%- endfor %}
+        </p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if results | length %}
+    <h2 class="govuk-heading-m">
+      {{ results | length }} result{{ "" if results | length == 1 else "s" }}
+    </h2>
+
+    {% for result in results %}
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-1">
+          <a class="govuk-link" href="{{ result.startPath }}">
+            {% if result.sectionNumber %}{{ result.sectionNumber }} {{ result.heading }}{% else %}{{ result.documentTitle }}{% endif %}
+          </a>
+        </h3>
+        {% if result.sectionNumber %}
+          <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-1">
+            {{ result.documentTitle }}
+          </p>
+        {% endif %}
+        <p class="govuk-body">{{ result.reason }}</p>
+      </div>
+    {% endfor %}
+  {% else %}
+    <h2 class="govuk-heading-m">No results</h2>
+    <p class="govuk-body">
+      Nothing in the indexed guidance answers “{{ query }}”. Try the
+      words the guidance itself would use — a case type, an option code,
+      or the name of the check.
+    </p>
+  {% endif %}
+{% endif %}

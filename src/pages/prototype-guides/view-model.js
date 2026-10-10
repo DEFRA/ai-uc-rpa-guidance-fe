@@ -1,11 +1,11 @@
-import { colouredText } from '../../../infra/markdown/coloured-text.js'
-import { createMarkdown } from '../../../infra/markdown/markdown.js'
-import { govukRenderer } from '../../../infra/markdown/govuk-renderer.js'
-import { sanitiseGuidanceHtml } from '../../../infra/markdown/sanitise.js'
-import { homeCrumb } from '../../common/breadcrumbs.js'
+import { colouredText } from '../../infra/markdown/coloured-text.js'
+import { createMarkdown } from '../../infra/markdown/markdown.js'
+import { govukRenderer } from '../../infra/markdown/govuk-renderer.js'
+import { sanitiseGuidanceHtml } from '../../infra/markdown/sanitise.js'
+import { homeCrumb } from '../common/breadcrumbs.js'
 
-const LIST_HREF = '/admin/prototype-guides'
-const LIST_TITLE = 'Prototype guidance admin'
+const LIST_HREF = '/prototype-guides'
+const LIST_TITLE = 'Prototype guidance'
 
 // What a cell shows when the manifest has no entry for its version.
 const MISSING = '-'
@@ -114,12 +114,18 @@ function notificationFor ({ purged, uploaded }) {
 /**
  * @param {object[]} guides Manifest entries, each with its `name`.
  * @param {{ purged?: number, uploaded?: boolean }} [outcome]
+ * @param {{ query?: string, search?: object | null }} [searched] What was
+ *   searched for, and the search, or null when nothing was asked.
  * @returns {object}
  */
-function prototypeGuidesViewModel (guides, outcome = {}) {
+function prototypeGuidesViewModel (guides, outcome = {}, { query = '', search = null } = {}) {
   return {
-    pageTitle: LIST_TITLE,
+    pageTitle: query ? `Search results for ${query} - ${LIST_TITLE}` : LIST_TITLE,
     notification: notificationFor(outcome),
+    query,
+    answer: search?.answer ?? null,
+    results: search?.results ?? [],
+    searched: Boolean(search),
     hasGuides: guides.length > 0,
     rows: guides.map((guide) => {
       const latest = latestVersionOf(guide)
@@ -176,6 +182,44 @@ function prototypeGuideViewModel ({ guide, markdown }) {
 }
 
 /**
+ * The path the search index links to for a whole guide. It mirrors the API's
+ * path for the guide's content, so a link the index holds opens here.
+ *
+ * @param {string} documentId
+ * @returns {string}
+ */
+function guideContentHref (documentId) {
+  return `/prototype/guides/${encodeURIComponent(documentId)}/content`
+}
+
+/**
+ * One section of a guide's latest version, rendered, with the way into the
+ * whole guide.
+ *
+ * @param {{ guide: object, markdown: string }} params
+ * @returns {object}
+ */
+function prototypeGuideSectionViewModel ({ guide, markdown }) {
+  const contentHtml = sanitiseGuidanceHtml(
+    createMarkdown()
+      .use(govukRenderer())
+      .use(colouredText())
+      .render(toBrowserAssetPaths(markdown, guide.documentId))
+  )
+
+  return {
+    pageTitle: `${guide.title} - ${LIST_TITLE}`,
+    title: guide.title,
+    guideHref: guideContentHref(guide.documentId),
+    contentHtml,
+    breadcrumbs: [
+      homeCrumb,
+      { text: guide.title, href: guideContentHref(guide.documentId) }
+    ]
+  }
+}
+
+/**
  * @param {object[]} guides Manifest entries.
  * @returns {object}
  */
@@ -214,6 +258,7 @@ function escapeHtml (value) {
 export {
   prototypeGuidesViewModel,
   prototypeGuideViewModel,
+  prototypeGuideSectionViewModel,
   purgeViewModel,
   uploadViewModel,
   toBrowserAssetPaths

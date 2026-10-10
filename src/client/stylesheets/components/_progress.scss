@@ -1,0 +1,25 @@
+@use 'govuk-frontend' as *;
+
+// A native progress bar in GOV.UK colours: GOV.UK Frontend has no component
+// for one.
+.app-progress {
+  display: block;
+  width: 100%;
+  height: govuk-spacing(5);
+  margin-bottom: govuk-spacing(4);
+  border: $govuk-border-width-form-element solid $govuk-input-border-colour;
+  background-color: govuk-colour("black", $variant: "tint-95");
+  appearance: none;
+
+  &::-webkit-progress-bar {
+    background-color: govuk-colour("black", $variant: "tint-95");
+  }
+
+  &::-webkit-progress-value {
+    background-color: $govuk-brand-colour;
+  }
+
+  &::-moz-progress-bar {
+    background-color: $govuk-brand-colour;
+  }
+}

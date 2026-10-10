@@ -1,9 +1,62 @@
 import { statusCodes } from '../../../constants/status-codes.js'
-import { rebuildDocumentSummaries } from '../../../services/document-summaries.js'
-import { listAllGuidanceDocuments } from '../../../services/guidance-documents.js'
+import {
+  cancelIndexRebuild,
+  getCurrentIndexRebuild,
+  getIndexRebuild,
+  startIndexRebuild
+} from '../../../services/document-summaries.js'
+import { listPrototypeGuides } from '../../../services/prototype-guides.js'
 import { searchIndexViewModel } from './view-model.js'
 
-const NOTHING_SELECTED = 'Select at least one document to index'
+// Partial keeps what is indexed, so it is what a request that names no mode
+// gets.
+const DEFAULT_MODE = 'partial'
+
+const ALREADY_REBUILDING = 'The index is already being rebuilt. Wait for it to finish, then try again.'
+
+/**
+ * @param {string} rebuildId
+ * @returns {string}
+ */
+function progressPath (rebuildId) {
+  return `/admin/search-index/rebuilds/${encodeURIComponent(rebuildId)}`
+}
+
+/**
+ * Start a rebuild, or follow the one already running.
+ *
+ * A rebuild refused because another is running is followed instead. If that
+ * one has finished by the time it is looked for, the rebuild is started once
+ * more.
+ *
+ * @param {'full' | 'partial'} mode
+ * @returns {Promise<object | null>} The rebuild to follow, or null if one is
+ *   in the way and cannot be found.
+ */
+async function startOrFollowRebuild (mode) {
+  return (await startIndexRebuild(mode)) ??
+    (await getCurrentIndexRebuild()) ??
+    (await startIndexRebuild(mode))
+}
+
+/**
+ * @param {import('@hapi/hapi').ResponseToolkit} h
+ * @param {'full' | 'partial'} mode
+ * @returns {Promise<import('@hapi/hapi').ResponseObject>}
+ */
+async function followOrRefuse (h, mode) {
+  const rebuild = await startOrFollowRebuild(mode)
+
+  if (rebuild) {
+    return h.redirect(progressPath(rebuild.rebuildId))
+  }
+
+  const guides = await listPrototypeGuides()
+
+  return h
+    .view('admin/search-index/page.njk', searchIndexViewModel(guides, { errorMessage: ALREADY_REBUILDING }))
+    .code(statusCodes.HTTP_STATUS_CONFLICT)
+}
 
 /**
  * @param {import('@hapi/hapi').Request} _request
@@ -11,57 +64,54 @@ const NOTHING_SELECTED = 'Select at least one document to index'
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
 async function getSearchIndexAdmin (_request, h) {
-  const documents = await listAllGuidanceDocuments()
+  const [guides, current] = await Promise.all([
+    listPrototypeGuides(),
+    getCurrentIndexRebuild()
+  ])
 
-  return h.view('admin/search-index/page.njk', searchIndexViewModel(documents))
+  return h.view('admin/search-index/page.njk', searchIndexViewModel(guides, { current }))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
 /**
- * Rebuild the index from the selected documents.
+ * Queue a rebuild of the index, full or partial, then follow it.
  *
- * The rebuild is synchronous — the index is purged, then a model pass per
- * document — so this request is held open until every summary has been built
- * or has failed. Only the counts survive the redirect; the summaries
- * themselves are read back from the service, so a refresh of the confirmation
- * shows what is stored rather than rebuilding it — which is also why the
- * time it took is carried across: the confirmation cannot measure a rebuild
- * it did not run.
+ * The API runs the rebuild in the background and answers at once, so this
+ * request is not held open: the browser is sent to the rebuild's progress
+ * page, which follows it to the end. If a rebuild is already running, the
+ * browser follows that one instead.
  *
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
 async function postSearchIndexRebuild (request, h) {
-  const { documentIds } = request.payload
-  const selected = [].concat(documentIds)
-
-  const { purged, failures, durationSeconds } = await rebuildDocumentSummaries(selected)
-
-  return h.redirect(
-    '/admin/search-index/rebuilt' +
-    `?purged=${purged}&failed=${failures.length}&took=${durationSeconds}`
-  )
+  return followOrRefuse(h, request.payload?.mode ?? DEFAULT_MODE)
 }
 
 /**
- * Re-render the page with an error rather than rebuilding nothing.
+ * Cancel a rebuild, then start another of the same mode and follow it.
  *
- * @param {import('@hapi/hapi').Request} _request
+ * A rebuild that is unknown or no longer running needs no cancelling, so the
+ * new rebuild starts anyway: with the mode of the one asked to be cancelled
+ * if it can still be read, or partial, which keeps what is indexed.
+ *
+ * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
-async function rebuildFailAction (_request, h) {
-  const documents = await listAllGuidanceDocuments()
+async function postCancelAndRebuild (request, h) {
+  const { rebuildId } = request.params
 
-  return h
-    .view('admin/search-index/page.njk', searchIndexViewModel(documents, NOTHING_SELECTED))
-    .code(statusCodes.HTTP_STATUS_BAD_REQUEST)
-    .takeover()
+  const cancelled = (await cancelIndexRebuild(rebuildId)) ??
+    (await getIndexRebuild(rebuildId))
+
+  return followOrRefuse(h, cancelled?.mode ?? DEFAULT_MODE)
 }
 
 export {
+  DEFAULT_MODE,
   getSearchIndexAdmin,
   postSearchIndexRebuild,
-  rebuildFailAction
+  postCancelAndRebuild
 }

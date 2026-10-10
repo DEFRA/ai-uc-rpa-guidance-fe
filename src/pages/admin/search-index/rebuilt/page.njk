@@ -19,6 +19,9 @@
       <p class="govuk-body">
         {% if timeTaken %}Built in {{ timeTaken }}. {% endif %}
         {{ purgedCount }} previous summar{{ "y" if purgedCount == 1 else "ies" }} discarded before this rebuild.
+        {% if skippedCount %}
+          {{ skippedCount }} guide{{ " was" if skippedCount == 1 else "s were" }} already up to date, so not indexed again.
+        {% endif %}
       </p>
 
       {% if failedCount %}

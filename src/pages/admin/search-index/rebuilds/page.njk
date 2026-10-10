@@ -1,0 +1,49 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block head %}
+  {{ super() }}
+  {% if refreshSeconds %}
+    {# Only without scripts: with them, the bar is updated in place. #}
+    <noscript>
+      <meta http-equiv="refresh" content="{{ refreshSeconds }}">
+    </noscript>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      {% if cancelled %}
+        <h1 class="govuk-heading-xl">The rebuild was cancelled</h1>
+
+        <p class="govuk-body">
+          <a class="govuk-link" href="/admin/search-index">Go back to the search index admin</a>
+        </p>
+      {% else %}
+        <h1 class="govuk-heading-xl">Rebuilding the search index</h1>
+
+        <div data-module="rebuild-progress" data-status-url="{{ statusUrl }}">
+          <p class="govuk-body" id="rebuild-progress-label" aria-live="polite" data-rebuild-progress-label>{{ label }}</p>
+          <progress class="app-progress" aria-labelledby="rebuild-progress-label" max="{{ total }}" value="{{ completed }}">
+            {{ completed }} of {{ total }}
+          </progress>
+        </div>
+
+        <p class="govuk-body govuk-hint">This page updates itself. When the rebuild finishes, it shows what is in the index.</p>
+
+        <h2 class="govuk-heading-m">Would you like to cancel the current rebuild and reindex?</h2>
+
+        <form method="post" action="{{ cancelAndRebuildAction }}">
+          {{ govukButton({
+            text: "Cancel the current rebuild and reindex",
+            classes: "govuk-button--warning"
+          }) }}
+        </form>
+      {% endif %}
+
+    </main>
+  </div>
+{% endblock %}

@@ -109,6 +109,16 @@ async function getPrototypeGuideContent (documentId) {
   })
 }
 
+async function getPrototypeGuideSection (documentId, sectionNumber) {
+  return request(
+    `/prototype/guides/${encodeURIComponent(documentId)}/sections/${encodeURIComponent(sectionNumber)}`,
+    {
+      responseType: 'text',
+      expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+    }
+  )
+}
+
 async function getPrototypeGuideAsset (documentId, assetId) {
   return request(
     `/prototype/guides/${encodeURIComponent(documentId)}/assets/${encodeURIComponent(assetId)}`,
@@ -131,10 +141,36 @@ async function listSummaries () {
   return request('/guidance/summaries/')
 }
 
-async function rebuildSummaries (documentIds) {
+// The rebuild is queued and runs in the API's background: this returns at
+// once with the rebuild to follow, or 409 if one is already queued or running.
+// A full rebuild empties the index first; a partial one indexes only guides
+// that are new or changed.
+async function rebuildSummaries (mode) {
   return request('/guidance/summaries/rebuild', {
     method: 'POST',
-    body: { documentIds }
+    body: { mode },
+    expected: [http2StatusCodes.HTTP_STATUS_CONFLICT]
+  })
+}
+
+async function getCurrentSummaryRebuild () {
+  return request('/guidance/summaries/rebuilds/current', {
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
+// Returns once the cancellation is recorded, so a rebuild started straight
+// after it is accepted.
+async function cancelSummaryRebuild (rebuildId) {
+  return request(`/guidance/summaries/rebuilds/${encodeURIComponent(rebuildId)}/cancel`, {
+    method: 'POST',
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND, http2StatusCodes.HTTP_STATUS_CONFLICT]
+  })
+}
+
+async function getSummaryRebuild (rebuildId) {
+  return request(`/guidance/summaries/rebuilds/${encodeURIComponent(rebuildId)}`, {
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
   })
 }
 
@@ -194,6 +230,9 @@ export {
   listDocuments,
   listSummaries,
   rebuildSummaries,
+  getSummaryRebuild,
+  getCurrentSummaryRebuild,
+  cancelSummaryRebuild,
   searchGuidance,
   getDocument,
   getDocumentManifest,
@@ -203,6 +242,7 @@ export {
   getDocumentImage,
   getPrototypeGuidesManifest,
   getPrototypeGuideContent,
+  getPrototypeGuideSection,
   getPrototypeGuideAsset,
   purgePrototypeGuides,
   initiatePrototypeGuidesUpload,

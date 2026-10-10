@@ -31,15 +31,16 @@ function timeTaken (seconds) {
 
 /**
  * @param {object[]} summaries
- * @param {{ purged: number, failed: number, took: number }} counts
+ * @param {{ purged: number, failed: number, took: number, skipped?: number }} counts
  * @returns {object}
  */
-function rebuiltViewModel (summaries, { purged, failed, took }) {
+function rebuiltViewModel (summaries, { purged, failed, took, skipped = 0 }) {
   return {
     pageTitle: 'Index rebuilt',
     summaries,
     purgedCount: purged,
     failedCount: failed,
+    skippedCount: skipped,
     timeTaken: timeTaken(took),
     breadcrumbs: [
       homeCrumb,

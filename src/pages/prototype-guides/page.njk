@@ -1,11 +1,11 @@
 {% extends "common/layout.njk" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
-{% set pageTitle = 'Prototype guidance admin' %}
 
 {% block content %}
   <div class="govuk-width-container">
@@ -15,7 +15,29 @@
         {{ govukNotificationBanner(notification) }}
       {% endif %}
 
-      <h1 class="govuk-heading-xl">Prototype guidance admin</h1>
+      <h1 class="govuk-heading-xl">Prototype guidance</h1>
+
+      <form method="get" action="/prototype-guides" role="search" class="govuk-!-margin-bottom-6">
+        {{ govukInput({
+          id: "q",
+          name: "q",
+          type: "search",
+          value: query,
+          label: {
+            text: "Search prototype guidance",
+            classes: "govuk-visually-hidden"
+          },
+          attributes: {
+            placeholder: "Search by title or by any words the document contains or ask a question",
+            "data-module": "search-shortcut"
+          },
+          classes: "govuk-!-width-two-thirds"
+        }) }}
+
+        {{ govukButton({ text: "Search" }) }}
+      </form>
+
+      {% include "prototype-guides/search-results.njk" %}
 
       <p class="govuk-body-l">
         The guides the API currently serves to the AI Hub prototype.
@@ -56,14 +78,14 @@
         }) }}
       {% endif %}
 
-      <form method="post" action="/admin/prototype-guides/upload">
+      <form method="post" action="/prototype-guides/upload">
         <div class="govuk-button-group">
           {{ govukButton({ text: "Upload guides" }) }}
 
           {% if hasGuides %}
             {{ govukButton({
               text: "Purge all guides",
-              href: "/admin/prototype-guides/purge",
+              href: "/prototype-guides/purge",
               classes: "govuk-button--warning"
             }) }}
           {% endif %}
