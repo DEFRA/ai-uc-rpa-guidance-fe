@@ -1,8 +1,8 @@
 {% extends "common/layout.njk" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 {% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
 {% set pageTitle = 'Search index admin' %}
@@ -14,38 +14,55 @@
       {% if errorMessage %}
         {{ govukErrorSummary({
           titleText: "There is a problem",
-          errorList: [{ text: errorMessage, href: "#documentIds" }]
+          errorList: [{ text: errorMessage }]
+        }) }}
+      {% endif %}
+
+      {% if currentRebuildHref %}
+        {{ govukNotificationBanner({
+          html: '<p class="govuk-notification-banner__heading">The index is being rebuilt</p>' ~
+            '<p class="govuk-body"><a class="govuk-notification-banner__link" href="' ~ currentRebuildHref ~ '">See the progress</a></p>'
         }) }}
       {% endif %}
 
       <h1 class="govuk-heading-xl">Search index admin</h1>
 
+      <p class="govuk-body">
+        Indexing new and changed guides indexes only the guides that are new or have changed
+        since they were last indexed, and removes guides that are no longer loaded.
+      </p>
+
       {{ govukWarningText({
-        text: "Rebuilding discards the whole index first, so it ends up holding only the documents selected here. Each one is summarised by the model, which takes a few seconds; the page waits for all of them.",
+        text: "Rebuilding the whole index empties the index first, then summarises every guide again. Search finds less until it finishes. Both run in the background, and a progress page follows them.",
         iconFallbackText: "Warning"
       }) }}
 
-      {% if documents | length %}
-        <form method="post" action="/admin/search-index/rebuild">
-          {{ govukCheckboxes({
-            name: "documentIds",
-            fieldset: {
-              legend: {
-                text: "Documents to index",
-                classes: "govuk-fieldset__legend--m"
-              }
-            },
-            hint: {
-              text: "Every guidance document held by the service."
-            },
-            items: documents,
-            errorMessage: errorMessage and { text: errorMessage }
-          }) }}
+      {% if guides | length %}
+        <h2 class="govuk-heading-m">Prototype guides to index</h2>
+        <ul class="govuk-list govuk-list--bullet">
+          {% for guide in guides %}
+            <li>{{ guide }}</li>
+          {% endfor %}
+        </ul>
 
-          {{ govukButton({ text: "Rebuild index" }) }}
+        <form method="post" action="/admin/search-index/rebuild">
+          <div class="govuk-button-group">
+            {{ govukButton({
+              text: "Index new and changed guides",
+              name: "mode",
+              value: "partial"
+            }) }}
+
+            {{ govukButton({
+              text: "Rebuild the whole index",
+              name: "mode",
+              value: "full",
+              classes: "govuk-button--warning"
+            }) }}
+          </div>
         </form>
       {% else %}
-        <p class="govuk-body">There are no guidance documents to index.</p>
+        <p class="govuk-body">There are no prototype guides to index.</p>
       {% endif %}
 
     </main>

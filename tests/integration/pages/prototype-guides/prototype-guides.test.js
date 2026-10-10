@@ -44,7 +44,7 @@ const manifest = {
 
 const notFound = { ok: false, status: statusCodes.HTTP_STATUS_NOT_FOUND, data: null }
 
-describe('#prototypeGuidesAdminController', () => {
+describe('#prototypeGuidesController', () => {
   let server
 
   beforeAll(async () => {
@@ -60,17 +60,17 @@ describe('#prototypeGuidesAdminController', () => {
     vi.clearAllMocks()
   })
 
-  describe('GET /admin/prototype-guides', () => {
+  describe('GET /prototype-guides', () => {
     test('Should list each guide in the manifest with a link to it', async () => {
       mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
 
       const { statusCode, payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides'
+        url: '/prototype-guides'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-      expect(payload).toContain(`href="/admin/prototype-guides/${DOCUMENT_ID}"`)
+      expect(payload).toContain(`href="/prototype-guides/${DOCUMENT_ID}"`)
       expect(payload).toContain('Claims Guide')
       expect(payload).toContain('claims-guide')
       expect(payload).toContain('1 Oct 2026, 15:28')
@@ -85,12 +85,12 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode, payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides'
+        url: '/prototype-guides'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
       expect(payload).not.toContain('<img src=x')
-      expect(payload).toContain(`href="/admin/prototype-guides/${encodeURIComponent(hostileId)}"`)
+      expect(payload).toContain(`href="/prototype-guides/${encodeURIComponent(hostileId)}"`)
     })
 
     test('Should list a guide whose manifest has no dates', async () => {
@@ -102,7 +102,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode, payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides'
+        url: '/prototype-guides'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
@@ -114,7 +114,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode, payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides'
+        url: '/prototype-guides'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
@@ -126,12 +126,12 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides'
+        url: '/prototype-guides'
       })
 
-      expect(payload).toContain('action="/admin/prototype-guides/upload"')
+      expect(payload).toContain('action="/prototype-guides/upload"')
       expect(payload).toContain('Uploading replaces all the guides currently loaded')
-      expect(payload).toContain('href="/admin/prototype-guides/purge"')
+      expect(payload).toContain('href="/prototype-guides/purge"')
       expect(payload).toContain('govuk-button--warning')
     })
 
@@ -140,12 +140,12 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides'
+        url: '/prototype-guides'
       })
 
-      expect(payload).toContain('action="/admin/prototype-guides/upload"')
+      expect(payload).toContain('action="/prototype-guides/upload"')
       expect(payload).not.toContain('Uploading replaces all the guides')
-      expect(payload).not.toContain('href="/admin/prototype-guides/purge"')
+      expect(payload).not.toContain('href="/prototype-guides/purge"')
     })
 
     test('Should report how many files a purge deleted', async () => {
@@ -153,7 +153,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides?purged=12'
+        url: '/prototype-guides?purged=12'
       })
 
       expect(payload).toContain('Prototype guides purged')
@@ -165,7 +165,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides?uploaded=true'
+        url: '/prototype-guides?uploaded=true'
       })
 
       expect(payload).toContain('Your zip file has been uploaded')
@@ -178,13 +178,13 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode, payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides/purge'
+        url: '/prototype-guides/purge'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
       expect(payload).toContain('Are you sure you want to purge all prototype guides?')
       expect(payload).toContain('You cannot undo this')
-      expect(payload).toContain('action="/admin/prototype-guides/purge"')
+      expect(payload).toContain('action="/prototype-guides/purge"')
       expect(mockPurge).not.toHaveBeenCalled()
     })
 
@@ -193,11 +193,11 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode, headers } = await server.inject({
         method: 'POST',
-        url: '/admin/prototype-guides/purge'
+        url: '/prototype-guides/purge'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
-      expect(headers.location).toBe('/admin/prototype-guides?purged=12')
+      expect(headers.location).toBe('/prototype-guides?purged=12')
       expect(mockPurge).toHaveBeenCalledTimes(1)
     })
   })
@@ -211,7 +211,7 @@ describe('#prototypeGuidesAdminController', () => {
     ])('Should refuse when %s', async (_case, headers) => {
       const { statusCode } = await server.inject({
         method: 'POST',
-        url: '/admin/prototype-guides/purge',
+        url: '/prototype-guides/purge',
         headers
       })
 
@@ -227,7 +227,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode } = await server.inject({
         method: 'POST',
-        url: '/admin/prototype-guides/purge',
+        url: '/prototype-guides/purge',
         headers
       })
 
@@ -242,18 +242,18 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode, headers } = await server.inject({
         method: 'POST',
-        url: '/admin/prototype-guides/upload'
+        url: '/prototype-guides/upload'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_FOUND)
-      expect(headers.location).toBe('/admin/prototype-guides/upload?uploadId=upload-123')
-      expect(mockInitiateUpload).toHaveBeenCalledWith('/admin/prototype-guides?uploaded=true')
+      expect(headers.location).toBe('/prototype-guides/upload?uploadId=upload-123')
+      expect(mockInitiateUpload).toHaveBeenCalledWith('/prototype-guides?uploaded=true')
     })
 
     test('Should show a form posting the zip to CDP uploader', async () => {
       const { statusCode, payload } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides/upload?uploadId=upload-123'
+        url: '/prototype-guides/upload?uploadId=upload-123'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
@@ -264,14 +264,14 @@ describe('#prototypeGuidesAdminController', () => {
     test('Should reject the form without an upload id', async () => {
       const { statusCode } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides/upload'
+        url: '/prototype-guides/upload'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_BAD_REQUEST)
     })
   })
 
-  describe('GET /admin/prototype-guides/{documentId}', () => {
+  describe('GET /prototype-guides/{documentId}', () => {
     test('Should render the guide with its pictures served by this app', async () => {
       mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
       mockGetContent.mockResolvedValueOnce({
@@ -281,13 +281,13 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode, payload } = await server.inject({
         method: 'GET',
-        url: `/admin/prototype-guides/${DOCUMENT_ID}`
+        url: `/prototype-guides/${DOCUMENT_ID}`
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
       expect(mockGetContent).toHaveBeenCalledWith(DOCUMENT_ID)
       expect(payload).toContain('1 Introduction')
-      expect(payload).toContain(`src="/admin/prototype-guides/${DOCUMENT_ID}/assets/${ASSET_ID}"`)
+      expect(payload).toContain(`src="/prototype-guides/${DOCUMENT_ID}/assets/${ASSET_ID}"`)
       expect(payload).not.toContain('../assets/')
       // The title is the page's own heading, not repeated from the content.
       expect(payload.match(/>Claims Guide</g)).toHaveLength(2) // heading + breadcrumb
@@ -298,7 +298,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides/00000000-0000-4000-8000-000000000000'
+        url: '/prototype-guides/00000000-0000-4000-8000-000000000000'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
@@ -311,7 +311,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode } = await server.inject({
         method: 'GET',
-        url: `/admin/prototype-guides/${DOCUMENT_ID}`
+        url: `/prototype-guides/${DOCUMENT_ID}`
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
@@ -320,7 +320,7 @@ describe('#prototypeGuidesAdminController', () => {
     test('Should 404 for an id that is not a uuid', async () => {
       const { statusCode } = await server.inject({
         method: 'GET',
-        url: '/admin/prototype-guides/not-a-uuid'
+        url: '/prototype-guides/not-a-uuid'
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
@@ -328,13 +328,13 @@ describe('#prototypeGuidesAdminController', () => {
     })
   })
 
-  describe('GET /admin/prototype-guides/{documentId}/assets/{assetId}', () => {
+  describe('GET /prototype-guides/{documentId}/assets/{assetId}', () => {
     test('Should proxy the picture with its content type', async () => {
       mockGetAsset.mockResolvedValueOnce({ ok: true, data: Buffer.from([0x89, 0x50]) })
 
       const { statusCode, headers } = await server.inject({
         method: 'GET',
-        url: `/admin/prototype-guides/${DOCUMENT_ID}/assets/${ASSET_ID}`
+        url: `/prototype-guides/${DOCUMENT_ID}/assets/${ASSET_ID}`
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
@@ -347,7 +347,7 @@ describe('#prototypeGuidesAdminController', () => {
 
       const { statusCode } = await server.inject({
         method: 'GET',
-        url: `/admin/prototype-guides/${DOCUMENT_ID}/assets/missing.png`
+        url: `/prototype-guides/${DOCUMENT_ID}/assets/missing.png`
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
@@ -356,11 +356,62 @@ describe('#prototypeGuidesAdminController', () => {
     test('Should 404 for an asset name that could leave the folder', async () => {
       const { statusCode } = await server.inject({
         method: 'GET',
-        url: `/admin/prototype-guides/${DOCUMENT_ID}/assets/..%2Fsecret`
+        url: `/prototype-guides/${DOCUMENT_ID}/assets/..%2Fsecret`
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
       expect(mockGetAsset).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('#prototypeGuidesPage', () => {
+  let server
+
+  beforeAll(async () => {
+    server = await createServer()
+    await server.initialize()
+  })
+
+  afterAll(async () => {
+    await server.stop({ timeout: 0 })
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test('Should be called Prototype guidance, not an admin page', async () => {
+    mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
+
+    const { payload } = await server.inject({ method: 'GET', url: '/prototype-guides' })
+
+    expect(payload).toContain('<h1 class="govuk-heading-xl">Prototype guidance</h1>')
+    expect(payload).toMatch(/<title>\s*Prototype guidance/)
+    expect(payload).not.toContain('Prototype guidance admin')
+  })
+
+  test('Should call a guide page Prototype guidance in its title and breadcrumbs', async () => {
+    mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
+    mockGetContent.mockResolvedValueOnce({ ok: true, data: '# Claims Guide\n\nBody.' })
+
+    const { payload } = await server.inject({ method: 'GET', url: `/prototype-guides/${DOCUMENT_ID}` })
+
+    expect(payload).toContain('href="/prototype-guides"')
+    expect(payload).toContain('Claims Guide - Prototype guidance')
+    expect(payload).not.toContain('Prototype guidance admin')
+  })
+
+  test.each([
+    ['/admin/prototype-guides', '/prototype-guides'],
+    ['/admin/prototype-guides?purged=12', '/prototype-guides?purged=12'],
+    [`/admin/prototype-guides/${DOCUMENT_ID}`, `/prototype-guides/${DOCUMENT_ID}`],
+    ['/admin/prototype-guides/purge', '/prototype-guides/purge'],
+    [`/admin/prototype-guides/${DOCUMENT_ID}/assets/${ASSET_ID}`, `/prototype-guides/${DOCUMENT_ID}/assets/${ASSET_ID}`]
+  ])('Should move %s permanently to %s', async (from, to) => {
+    const { statusCode, headers } = await server.inject({ method: 'GET', url: from })
+
+    expect(statusCode).toBe(statusCodes.HTTP_STATUS_MOVED_PERMANENTLY)
+    expect(headers.location).toBe(to)
   })
 })

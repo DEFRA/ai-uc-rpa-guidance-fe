@@ -5,15 +5,13 @@ import * as confirmationController from './upload/confirmation/controller.js'
 import * as documentEditController from './document-edit/controller.js'
 import * as editController from './edit/controller.js'
 import * as listController from './list/controller.js'
-import * as searchController from './search/controller.js'
 import * as uploadController from './upload/controller.js'
 import * as uploadFileController from './upload/file/controller.js'
 import * as viewerController from './viewer/controller.js'
 
-// A heading is one line of a document and a search is something a person
-// typed: both are bounded well short of what the payload limit allows.
+// A heading is one line of a document: bounded well short of what the
+// payload limit allows.
 const MAX_HEADING_LENGTH = 500
-const MAX_QUERY_LENGTH = 500
 
 const sectionParams = Joi.object({
   documentId: Joi.string().required(),
@@ -69,16 +67,11 @@ const routes = [
     handler: listController.getGuidanceDocuments
   },
   {
+    // Search moved to the prototype guidance page, with its query.
     method: 'GET',
     path: '/guidance-documents/search',
-    handler: searchController.getGuidanceDocumentSearch,
-    options: {
-      validate: {
-        query: Joi.object({
-          q: Joi.string().trim().allow('').max(MAX_QUERY_LENGTH).default('')
-        })
-      }
-    }
+    handler: (request, h) =>
+      h.redirect(`/prototype-guides${request.url.search ?? ''}`).permanent()
   },
   {
     method: 'GET',

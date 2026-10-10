@@ -1,22 +1,25 @@
 import Boom from '@hapi/boom'
 
-import { config } from '../../../config/config.js'
-import { statusCodes } from '../../../constants/status-codes.js'
+import { config } from '../../config/config.js'
+import { statusCodes } from '../../constants/status-codes.js'
+import { searchGuidance } from '../../services/guidance-search.js'
 import {
   getPrototypeGuide,
   getPrototypeGuideAsset,
+  getPrototypeGuideSection,
   listPrototypeGuides,
   purgePrototypeGuides,
   startPrototypeGuidesUpload
-} from '../../../services/prototype-guides.js'
+} from '../../services/prototype-guides.js'
 import {
   prototypeGuideViewModel,
+  prototypeGuideSectionViewModel,
   prototypeGuidesViewModel,
   purgeViewModel,
   uploadViewModel
 } from './view-model.js'
 
-const LIST_PATH = '/admin/prototype-guides'
+const LIST_PATH = '/prototype-guides'
 
 const cdpUploaderBrowserBase = config.get('cdpUploader.browserUrl')
 
@@ -32,16 +35,26 @@ const IMAGE_CONTENT_TYPES = {
 }
 
 /**
- * Every guide the API currently serves to the prototype.
+ * Every guide the API currently serves to the prototype, with the answer to a
+ * search above them when one was asked.
+ *
+ * The search agent is engaged only when something was actually typed: an
+ * empty box is a visit to the page, not a query, and running a corpus-wide
+ * search for it would cost the operator half a minute for nothing.
  *
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
 async function getPrototypeGuides (request, h) {
-  const guides = await listPrototypeGuides()
+  const { q = '', ...outcome } = request.query
 
-  return h.view('admin/prototype-guides/page.njk', prototypeGuidesViewModel(guides, request.query))
+  const [guides, search] = await Promise.all([
+    listPrototypeGuides(),
+    q ? searchGuidance(q) : null
+  ])
+
+  return h.view('prototype-guides/page.njk', prototypeGuidesViewModel(guides, outcome, { query: q, search }))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
@@ -55,7 +68,7 @@ async function getPrototypeGuides (request, h) {
 async function getPurgeConfirmation (_request, h) {
   const guides = await listPrototypeGuides()
 
-  return h.view('admin/prototype-guides/purge.njk', purgeViewModel(guides))
+  return h.view('prototype-guides/purge.njk', purgeViewModel(guides))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
@@ -94,7 +107,7 @@ function getUploadForm (request, h) {
   const { uploadId } = request.query
   const uploadUrl = `${cdpUploaderBrowserBase ?? ''}/upload-and-scan/${uploadId}`
 
-  return h.view('admin/prototype-guides/upload.njk', uploadViewModel(uploadUrl))
+  return h.view('prototype-guides/upload.njk', uploadViewModel(uploadUrl))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
@@ -112,7 +125,28 @@ async function getPrototypeGuideView (request, h) {
     throw Boom.notFound('Prototype guide not found')
   }
 
-  return h.view('admin/prototype-guides/guide.njk', prototypeGuideViewModel(found))
+  return h.view('prototype-guides/guide.njk', prototypeGuideViewModel(found))
+    .code(statusCodes.HTTP_STATUS_OK)
+}
+
+/**
+ * One section of a guide's latest version, rendered: where a search result
+ * for that section opens.
+ *
+ * @param {import('@hapi/hapi').Request} request
+ * @param {import('@hapi/hapi').ResponseToolkit} h
+ * @returns {Promise<import('@hapi/hapi').ResponseObject>}
+ */
+async function getPrototypeGuideSectionView (request, h) {
+  const { documentId, sectionNumber } = request.params
+
+  const found = await getPrototypeGuideSection(documentId, sectionNumber)
+
+  if (!found) {
+    throw Boom.notFound('Prototype guide section not found')
+  }
+
+  return h.view('prototype-guides/section.njk', prototypeGuideSectionViewModel(found))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
@@ -145,5 +179,6 @@ export {
   postUpload,
   getUploadForm,
   getPrototypeGuideView,
+  getPrototypeGuideSectionView,
   getPrototypeGuideImage
 }

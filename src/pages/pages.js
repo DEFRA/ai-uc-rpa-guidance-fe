@@ -3,6 +3,7 @@ import { guidanceDocumentsRouter } from './guidance-documents/router.js'
 import { publishingChecksRouter } from './publishing-checks/router.js'
 import { contentReviewRouter } from './content-review/router.js'
 import { adminRouter } from './admin/router.js'
+import { prototypeGuidesRouter } from './prototype-guides/router.js'
 
 const pageRouter = {
   plugin: {
@@ -13,7 +14,8 @@ const pageRouter = {
         guidanceDocumentsRouter,
         publishingChecksRouter,
         contentReviewRouter,
-        adminRouter
+        adminRouter,
+        prototypeGuidesRouter
       ])
     }
   }

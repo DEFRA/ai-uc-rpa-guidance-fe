@@ -72,29 +72,105 @@ describe('#guidanceApi', () => {
   })
 
   describe('#rebuildSummaries', () => {
-    test('Should POST the selected document ids', async () => {
+    test.each(['full', 'partial'])('Should POST a %s rebuild', async (mode) => {
       fetchMock.mockResponseOnce(
-        JSON.stringify({ items: [], failures: [] }),
-        { status: 200 }
+        JSON.stringify({ rebuildId: 'rebuild-1', status: 'queued' }),
+        { status: 202 }
       )
 
-      await guidanceApi.rebuildSummaries(['doc-1', 'doc-2'])
+      const res = await guidanceApi.rebuildSummaries(mode)
 
+      expect(res.ok).toBe(true)
+      expect(res.status).toBe(202)
       expect(fetchMock).toHaveBeenCalledWith(
         'http://guidance-api.test/guidance/summaries/rebuild',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ documentIds: ['doc-1', 'doc-2'] })
-        })
+        expect.objectContaining({ method: 'POST', body: JSON.stringify({ mode }) })
       )
+    })
+
+    test('Should return { ok: false } on 409 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 409, statusText: 'Conflict' })
+
+      const res = await guidanceApi.rebuildSummaries()
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(409)
     })
 
     test('Should throw on non-OK response', async () => {
       fetchMock.mockResponseOnce('', { status: 500, statusText: 'Server Error' })
 
-      await expect(guidanceApi.rebuildSummaries([])).rejects.toThrow(
+      await expect(guidanceApi.rebuildSummaries()).rejects.toThrow(
         'Guidance API POST /guidance/summaries/rebuild failed: 500 Server Error'
       )
+    })
+  })
+
+  describe('#getCurrentSummaryRebuild', () => {
+    test('Should GET the current rebuild', async () => {
+      fetchMock.mockResponseOnce(JSON.stringify({ rebuildId: 'rebuild-1', status: 'running' }))
+
+      const res = await guidanceApi.getCurrentSummaryRebuild()
+
+      expect(res.data.rebuildId).toBe('rebuild-1')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/summaries/rebuilds/current',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getCurrentSummaryRebuild()
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('#cancelSummaryRebuild', () => {
+    test('Should POST the cancellation', async () => {
+      fetchMock.mockResponseOnce(JSON.stringify({ rebuildId: 'rebuild-1', status: 'cancelled' }))
+
+      const res = await guidanceApi.cancelSummaryRebuild('rebuild-1')
+
+      expect(res.data.status).toBe('cancelled')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/summaries/rebuilds/rebuild-1/cancel',
+        expect.objectContaining({ method: 'POST' })
+      )
+    })
+
+    test.each([404, 409])('Should return { ok: false } on %i without throwing', async (status) => {
+      fetchMock.mockResponseOnce('', { status })
+
+      const res = await guidanceApi.cancelSummaryRebuild('rebuild-1')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(status)
+    })
+  })
+
+  describe('#getSummaryRebuild', () => {
+    test('Should GET the rebuild by id', async () => {
+      fetchMock.mockResponseOnce(JSON.stringify({ rebuildId: 'rebuild-1', status: 'running' }))
+
+      const res = await guidanceApi.getSummaryRebuild('rebuild-1')
+
+      expect(res.data.status).toBe('running')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/guidance/summaries/rebuilds/rebuild-1',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getSummaryRebuild('missing')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
     })
   })
 
@@ -382,6 +458,29 @@ describe('#guidanceApi', () => {
       fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
 
       const res = await guidanceApi.getPrototypeGuideContent('missing')
+
+      expect(res.ok).toBe(false)
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('#getPrototypeGuideSection', () => {
+    test('Should GET one section of the latest version as text', async () => {
+      fetchMock.mockResponseOnce('### 2.1 A section')
+
+      const res = await guidanceApi.getPrototypeGuideSection('doc-1', '2.1')
+
+      expect(res.data).toBe('### 2.1 A section')
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://guidance-api.test/prototype/guides/doc-1/sections/2.1',
+        expect.objectContaining({ method: 'GET' })
+      )
+    })
+
+    test('Should return { ok: false } on 404 without throwing', async () => {
+      fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
+
+      const res = await guidanceApi.getPrototypeGuideSection('doc-1', '99')
 
       expect(res.ok).toBe(false)
       expect(res.status).toBe(404)

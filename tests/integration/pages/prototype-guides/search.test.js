@@ -1,13 +1,15 @@
 import { constants as statusCodes } from 'node:http2'
 import { vi } from 'vitest'
 
-const { mockListDocuments, mockSearchGuidance } = vi.hoisted(() => ({
+const { mockListDocuments, mockGetManifest, mockSearchGuidance } = vi.hoisted(() => ({
   mockListDocuments: vi.fn(),
+  mockGetManifest: vi.fn(),
   mockSearchGuidance: vi.fn()
 }))
 
 vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
   listDocuments: mockListDocuments,
+  getPrototypeGuidesManifest: mockGetManifest,
   searchGuidance: mockSearchGuidance,
   initiateUpload: vi.fn(),
   getDocument: vi.fn()
@@ -44,7 +46,16 @@ const search = (overrides = {}) => ({
   }
 })
 
-describe('#guidanceDocumentSearchController', () => {
+const manifest = {
+  'claims-guide': {
+    documentId: DOCUMENT_ID,
+    title: 'Claims Guide',
+    latestVersion: 1,
+    versions: [{ version: 1, versionId: 'v1', sections: 4, images: 0 }]
+  }
+}
+
+describe('#prototypeGuidesSearch', () => {
   let server
 
   beforeAll(async () => {
@@ -56,7 +67,12 @@ describe('#guidanceDocumentSearchController', () => {
     await server.stop({ timeout: 0 })
   })
 
-  test('Should offer a find box on the documents list page', async () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetManifest.mockResolvedValue({ ok: true, data: manifest })
+  })
+
+  test('Should no longer offer a find box on the documents list page', async () => {
     mockListDocuments.mockResolvedValueOnce({
       ok: true,
       data: { items: [], total: 0, page: 1, pageSize: 10 }
@@ -67,9 +83,54 @@ describe('#guidanceDocumentSearchController', () => {
       url: '/guidance-documents'
     })
 
-    expect(payload).toContain('action="/guidance-documents/search"')
+    expect(payload).not.toContain('name="q"')
+  })
+
+  test('Should move the old search page permanently to the prototype guidance page', async () => {
+    const { statusCode, headers } = await server.inject({
+      method: 'GET',
+      url: '/guidance-documents/search?q=sda%20status'
+    })
+
+    expect(statusCode).toBe(statusCodes.HTTP_STATUS_MOVED_PERMANENTLY)
+    expect(headers.location).toBe('/prototype-guides?q=sda%20status')
+  })
+
+  test('Should put the search box at the top of the prototype guidance page', async () => {
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/prototype-guides'
+    })
+
+    const form = payload.indexOf('action="/prototype-guides"')
+    expect(form).toBeGreaterThan(-1)
+    expect(form).toBeLessThan(payload.indexOf('Claims Guide'))
     expect(payload).toContain('name="q"')
-    expect(payload).toContain('Find guidance')
+    expect(payload).toContain(
+      'placeholder="Search by title or by any words the document contains or ask a question"'
+    )
+    expect(payload).toMatch(/<label class="govuk-label[^"]*govuk-visually-hidden[^"]*" for="q">/)
+  })
+
+  test('Should mark the search box for the find shortcut', async () => {
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/prototype-guides'
+    })
+
+    expect(payload).toContain('data-module="search-shortcut"')
+  })
+
+  test('Should show the results above the guide list', async () => {
+    mockSearchGuidance.mockResolvedValueOnce(search())
+
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/prototype-guides?q=sda'
+    })
+
+    expect(payload.indexOf('3.2 SDA status')).toBeLessThan(payload.indexOf('Guides in the manifest'))
+    expect(payload).toContain('value="sda"')
   })
 
   test('Should engage the search agent with what was typed', async () => {
@@ -77,7 +138,7 @@ describe('#guidanceDocumentSearchController', () => {
 
     const { statusCode } = await server.inject({
       method: 'GET',
-      url: '/guidance-documents/search?q=sda%20status'
+      url: '/prototype-guides?q=sda%20status'
     })
 
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
@@ -89,7 +150,7 @@ describe('#guidanceDocumentSearchController', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/guidance-documents/search?q=sda'
+      url: '/prototype-guides?q=sda'
     })
 
     expect(payload).toContain('AI summary')
@@ -103,7 +164,7 @@ describe('#guidanceDocumentSearchController', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/guidance-documents/search?q=sda'
+      url: '/prototype-guides?q=sda'
     })
 
     expect(payload).toContain('1 result')
@@ -117,7 +178,7 @@ describe('#guidanceDocumentSearchController', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/guidance-documents/search?q=sda'
+      url: '/prototype-guides?q=sda'
     })
 
     expect(payload).not.toContain('AI summary')
@@ -131,7 +192,7 @@ describe('#guidanceDocumentSearchController', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/guidance-documents/search?q=nothing%20matches'
+      url: '/prototype-guides?q=nothing%20matches'
     })
 
     expect(payload).toContain('No results')
@@ -154,7 +215,7 @@ describe('#guidanceDocumentSearchController', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/guidance-documents/search?q=a%20guide'
+      url: '/prototype-guides?q=a%20guide'
     })
 
     expect(payload).toContain('A Guide')
@@ -164,11 +225,10 @@ describe('#guidanceDocumentSearchController', () => {
   test('Should not engage the agent for an empty box', async () => {
     const { statusCode, payload } = await server.inject({
       method: 'GET',
-      url: '/guidance-documents/search'
+      url: '/prototype-guides?q='
     })
 
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-    expect(payload).toContain('Search guidance')
     expect(payload).not.toContain('No results')
     expect(mockSearchGuidance).not.toHaveBeenCalled()
   })

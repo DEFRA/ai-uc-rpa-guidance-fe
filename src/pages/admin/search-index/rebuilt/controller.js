@@ -8,12 +8,12 @@ import { rebuiltViewModel } from './view-model.js'
  * @returns {Promise<import('@hapi/hapi').ResponseObject>}
  */
 async function getSearchIndexRebuilt (request, h) {
-  const { purged = 0, failed = 0, took = 0 } = request.query
+  const { purged = 0, failed = 0, took = 0, skipped = 0 } = request.query
 
   const summaries = await listDocumentSummaries()
 
   return h
-    .view('admin/search-index/rebuilt/page.njk', rebuiltViewModel(summaries, { purged, failed, took }))
+    .view('admin/search-index/rebuilt/page.njk', rebuiltViewModel(summaries, { purged, failed, took, skipped }))
     .code(statusCodes.HTTP_STATUS_OK)
 }
 

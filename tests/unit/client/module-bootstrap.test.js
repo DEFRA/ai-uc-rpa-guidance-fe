@@ -73,3 +73,37 @@ describe('#guidanceViewer entry point', () => {
     expect(mockMountViewer).not.toHaveBeenCalled()
   })
 })
+
+describe('#application entry point', () => {
+  test('Should send Ctrl-F to the marked search box', async () => {
+    document.body.innerHTML = '<input id="q" data-module="search-shortcut">'
+
+    await importFresh('../../../src/client/javascripts/application.js')
+
+    const event = new window.KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true })
+    document.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(document.activeElement.id).toBe('q')
+  })
+})
+
+describe('#application entry point, rebuild progress', () => {
+  test('Should follow the marked rebuild progress', async () => {
+    vi.useFakeTimers()
+    const fetch = vi.fn(() => new Promise(() => {}))
+    vi.stubGlobal('fetch', fetch)
+    document.body.innerHTML = `
+      <div data-module="rebuild-progress" data-status-url="/status">
+        <p data-rebuild-progress-label></p><progress></progress>
+      </div>
+    `
+
+    await importFresh('../../../src/client/javascripts/application.js')
+    await vi.advanceTimersByTimeAsync(2000)
+
+    expect(fetch).toHaveBeenCalledWith('/status', expect.anything())
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+})
