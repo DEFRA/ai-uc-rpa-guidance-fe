@@ -11,6 +11,12 @@ const MAX_QUERY_LENGTH = 500
 
 const documentId = Joi.string().uuid()
 
+// A guide reads whole, or one top-level section at a time.
+const guideQuery = Joi.object({
+  view: Joi.string().valid('whole', 'steps').default('whole'),
+  step: Joi.number().integer().min(1).default(1)
+})
+
 const prototypeGuideNotFound = (_request, _h, err) => {
   throw Boom.notFound('Prototype guide not found', err)
 }
@@ -98,6 +104,7 @@ const routes = [
     options: {
       validate: {
         params: Joi.object({ documentId: documentId.required() }),
+        query: guideQuery,
         failAction: prototypeGuideNotFound
       }
     }
@@ -127,6 +134,7 @@ const routes = [
     options: {
       validate: {
         params: Joi.object({ documentId: documentId.required() }),
+        query: guideQuery,
         failAction: prototypeGuideNotFound
       }
     }

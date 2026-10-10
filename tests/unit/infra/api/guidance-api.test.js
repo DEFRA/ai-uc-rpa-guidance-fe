@@ -440,16 +440,17 @@ describe('#guidanceApi', () => {
     })
   })
 
-  describe('#getPrototypeGuideContent', () => {
-    test('Should GET the latest content as text', async () => {
-      fetchMock.mockResponseOnce('# A guide')
+  describe('#getPrototypeGuideSections', () => {
+    test('Should GET the latest version cut into its sections', async () => {
+      const sections = { introduction: '# A guide\n', sections: [] }
+      fetchMock.mockResponseOnce(JSON.stringify(sections))
 
-      const res = await guidanceApi.getPrototypeGuideContent('doc-1')
+      const res = await guidanceApi.getPrototypeGuideSections('doc-1')
 
       expect(res.ok).toBe(true)
-      expect(res.data).toBe('# A guide')
+      expect(res.data).toEqual(sections)
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://guidance-api.test/prototype/guides/doc-1/content',
+        'http://guidance-api.test/prototype/guides/doc-1/sections',
         expect.objectContaining({ method: 'GET' })
       )
     })
@@ -457,7 +458,7 @@ describe('#guidanceApi', () => {
     test('Should return { ok: false } on 404 without throwing', async () => {
       fetchMock.mockResponseOnce('', { status: 404, statusText: 'Not Found' })
 
-      const res = await guidanceApi.getPrototypeGuideContent('missing')
+      const res = await guidanceApi.getPrototypeGuideSections('missing')
 
       expect(res.ok).toBe(false)
       expect(res.status).toBe(404)

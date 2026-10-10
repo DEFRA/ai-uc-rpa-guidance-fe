@@ -7,6 +7,10 @@ import { homeCrumb } from '../common/breadcrumbs.js'
 const LIST_HREF = '/prototype-guides'
 const LIST_TITLE = 'Prototype guidance'
 
+// A guide reads whole, or one step (a top-level section) at a time.
+const WHOLE = 'whole'
+const STEPS = 'steps'
+
 // What a cell shows when the manifest has no entry for its version.
 const MISSING = '-'
 
@@ -38,18 +42,10 @@ function formatDate (value) {
   return Number.isNaN(date.getTime()) ? value : dateFormat.format(date)
 }
 
-// Both dates are optional in the manifest; a guide's own are preferred, then
-// its latest version's, since older manifests carry only some of them.
-
 /**
- * @param {object} guide A manifest entry.
- * @returns {string}
- */
-function createdOf (guide) {
-  return formatDate(guide.createdAt ?? guide.versions?.[0]?.createdAt)
-}
-
-/**
+ * The date is optional in the manifest; a guide's own is preferred, then its
+ * latest version's, since older manifests carry only some of them.
+ *
  * @param {object} guide A manifest entry.
  * @returns {string}
  */
@@ -144,35 +140,155 @@ function prototypeGuidesViewModel (guides, outcome = {}, { query = '', search = 
 }
 
 /**
- * @param {{ guide: object, markdown: string }} params
- * @returns {object}
+ * Render a piece of a guide's Markdown, its pictures served by this app.
+ *
+ * @param {string} markdown
+ * @param {string} documentId
+ * @returns {string} Sanitised HTML.
  */
-function prototypeGuideViewModel ({ guide, markdown }) {
-  const latest = latestVersionOf(guide)
-
-  // The page prints the title itself, from the manifest, so the guide's own
-  // copy of it is dropped rather than shown twice.
-  const contentHtml = sanitiseGuidanceHtml(
+function renderGuideMarkdown (markdown, documentId) {
+  return sanitiseGuidanceHtml(
     createMarkdown()
       .use(govukRenderer())
       .use(colouredText())
-      .render(toBrowserAssetPaths(markdown.replace(LEADING_TITLE, ''), guide.documentId))
+      .render(toBrowserAssetPaths(markdown, documentId))
   )
+}
+
+/**
+ * True for a dotted section number ("2", "2.1"), false for the slug an
+ * unnumbered section is known by instead ("annex-a-case-types").
+ *
+ * @param {string} number
+ * @returns {boolean}
+ */
+function isDottedNumber (number) {
+  return number.split('.').every((part) => part !== '' && [...part].every((char) => char >= '0' && char <= '9'))
+}
+
+/**
+ * @param {{ number: string, heading: string }} section
+ * @returns {string} The section's heading, with its number when it has one.
+ */
+function sectionLabel (section) {
+  return isDottedNumber(section.number) ? `${section.number} ${section.heading}` : section.heading
+}
+
+/**
+ * @param {string} number A section's number or slug.
+ * @returns {string} The id of the section's place on the page.
+ */
+function sectionAnchor (number) {
+  return `section-${number}`
+}
+
+/**
+ * The guide's steps: each top-level section with the subsections after it.
+ * Subsections before the first top-level section join the first step, and a
+ * guide without sections is one step: its introduction alone.
+ *
+ * @param {object[]} sections
+ * @returns {object[][]}
+ */
+function stepsOf (sections) {
+  const steps = []
+
+  for (const section of sections) {
+    if (section.level === 1 || steps.length === 0) {
+      steps.push([])
+    }
+    steps.at(-1).push(section)
+  }
+
+  return steps.length ? steps : [[]]
+}
+
+/**
+ * The guide's outline at every depth, as the contents list draws it: each
+ * section under the last one above its level. A skipped level is not made up,
+ * so a subsection straight after a top-level section is its child.
+ *
+ * @param {object[]} sections
+ * @param {(section: object) => string} hrefOf
+ * @param {(section: object) => boolean} isCurrent
+ * @returns {object[]}
+ */
+function outlineOf (sections, hrefOf, isCurrent) {
+  const root = { children: [] }
+  // The last item at each depth so far: the root, then a section per level.
+  const ancestors = [root]
+
+  for (const section of sections) {
+    const item = {
+      number: isDottedNumber(section.number) ? section.number : '',
+      heading: section.heading,
+      href: hrefOf(section),
+      isCurrent: isCurrent(section),
+      isOpen: true,
+      children: []
+    }
+
+    ancestors.length = Math.min(section.level, ancestors.length)
+    ancestors.at(-1).children.push(item)
+    ancestors.push(item)
+  }
+
+  return root.children
+}
+
+/**
+ * One guide's latest version, whole or one step at a time, with its outline.
+ *
+ * @param {{ guide: object, introduction: string, sections: object[] }} found
+ * @param {{ view?: 'whole' | 'steps', step?: number }} [options]
+ * @returns {object | null} Null for a step the guide does not have.
+ */
+function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WHOLE, step = 1 } = {}) {
+  const steps = stepsOf(sections)
+  const stepping = view === STEPS
+
+  if (stepping && step > steps.length) {
+    return null
+  }
+
+  const stepOf = new Map(steps.flatMap((stepSections, index) =>
+    stepSections.map((section) => [section.number, index + 1])
+  ))
+  const stepHref = (number) => `?view=steps&step=${number}`
+
+  const hrefOf = (section) => {
+    const anchor = `#${sectionAnchor(section.number)}`
+    const sectionStep = stepOf.get(section.number)
+
+    return stepping && sectionStep !== step ? `${stepHref(sectionStep)}${anchor}` : anchor
+  }
+
+  const stepLink = (number) => number >= 1 && number <= steps.length && steps[number - 1].length
+    ? { href: stepHref(number), label: sectionLabel(steps[number - 1][0]) }
+    : null
+
+  const shown = stepping ? steps[step - 1] : sections
 
   return {
     pageTitle: `${guide.title} - ${LIST_TITLE}`,
     title: guide.title,
-    contentHtml,
-    details: [
-      { key: { text: 'Manifest name' }, value: { text: guide.name } },
-      { key: { text: 'Document ID' }, value: { text: guide.documentId } },
-      { key: { text: 'Latest version' }, value: { text: `${guide.latestVersion} (${latest?.versionId ?? 'missing'})` } },
-      { key: { text: 'Versions' }, value: { text: String(guide.versions?.length ?? 0) } },
-      { key: { text: 'Created' }, value: { text: createdOf(guide) } },
-      { key: { text: 'Updated' }, value: { text: updatedOf(guide) } },
-      { key: { text: 'Sections' }, value: { text: latest ? String(latest.sections) : MISSING } },
-      { key: { text: 'Images' }, value: { text: latest ? String(latest.images) : MISSING } }
+    // The page prints the title itself, from the manifest, so the guide's own
+    // copy of it is dropped rather than shown twice.
+    introductionHtml: !stepping || step === 1
+      ? renderGuideMarkdown(introduction.replace(LEADING_TITLE, ''), guide.documentId).trim()
+      : '',
+    sections: shown.map((section) => ({
+      anchor: sectionAnchor(section.number),
+      html: renderGuideMarkdown(section.markdown, guide.documentId)
+    })),
+    outline: outlineOf(sections, hrefOf, (section) => stepping && stepOf.get(section.number) === step),
+    views: [
+      { text: 'Traditional', href: `?view=${WHOLE}`, isCurrent: !stepping },
+      { text: 'Stepper', href: `?view=${STEPS}`, isCurrent: stepping }
     ],
+    step: stepping
+      ? { number: step, total: steps.length, previous: stepLink(step - 1), next: stepLink(step + 1) }
+      : null,
     breadcrumbs: [
       homeCrumb,
       { text: LIST_TITLE, href: LIST_HREF },
@@ -200,18 +316,11 @@ function guideContentHref (documentId) {
  * @returns {object}
  */
 function prototypeGuideSectionViewModel ({ guide, markdown }) {
-  const contentHtml = sanitiseGuidanceHtml(
-    createMarkdown()
-      .use(govukRenderer())
-      .use(colouredText())
-      .render(toBrowserAssetPaths(markdown, guide.documentId))
-  )
-
   return {
     pageTitle: `${guide.title} - ${LIST_TITLE}`,
     title: guide.title,
     guideHref: guideContentHref(guide.documentId),
-    contentHtml,
+    contentHtml: renderGuideMarkdown(markdown, guide.documentId),
     breadcrumbs: [
       homeCrumb,
       { text: guide.title, href: guideContentHref(guide.documentId) }

@@ -22,11 +22,11 @@ async function listPrototypeGuides () {
 }
 
 /**
- * A guide's manifest entry and the Markdown of its latest version, or null if
- * either is missing.
+ * A guide's manifest entry and its latest version cut into sections, or null
+ * if either is missing.
  *
  * @param {string} documentId
- * @returns {Promise<{ guide: object, markdown: string } | null>}
+ * @returns {Promise<{ guide: object, introduction: string, sections: object[] } | null>}
  */
 async function getPrototypeGuide (documentId) {
   const guides = await listPrototypeGuides()
@@ -36,9 +36,9 @@ async function getPrototypeGuide (documentId) {
     return null
   }
 
-  const res = await guidanceApi.getPrototypeGuideContent(documentId)
+  const res = await guidanceApi.getPrototypeGuideSections(documentId)
 
-  return res.ok ? { guide, markdown: res.data } : null
+  return res.ok ? { guide, ...res.data } : null
 }
 
 /**

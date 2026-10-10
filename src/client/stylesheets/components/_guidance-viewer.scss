@@ -36,6 +36,51 @@
   display: block;
 }
 
+// A guide's full outline shows every depth, open, on a panel of its own that
+// stays in view, and scrolls by itself when it is taller than the window.
+.app-toc--full {
+  padding: govuk-spacing(4);
+  background-color: govuk-colour('light-grey');
+
+  .app-toc__list .app-toc__list {
+    display: block;
+  }
+}
+
+// Long headings wrap in the sidebar rather than run out of it.
+.app-toc__heading {
+  overflow-wrap: break-word;
+}
+
+// The columns are as tall as the row, so the outline's sticky position holds
+// all the way down the guide, not just for its own height.
+.app-guide-layout {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+  }
+}
+
+// Traditional (the whole guide) or stepper (a step at a time).
+.app-guide-view-toggle {
+  display: flex;
+  gap: govuk-spacing(1);
+  margin-bottom: govuk-spacing(6);
+  @include govuk-font($size: 16);
+}
+
+.app-guide-view-toggle__option {
+  padding: govuk-spacing(1) govuk-spacing(3);
+  border: 1px solid $govuk-border-colour;
+  text-decoration: none;
+
+  &[aria-current] {
+    border-color: $govuk-link-colour;
+    background-color: $govuk-link-colour;
+    color: govuk-colour('white');
+    font-weight: bold;
+  }
+}
+
 // On the landing page the full contents tree is always shown.
 .app-doc-contents {
   margin-bottom: govuk-spacing(6);

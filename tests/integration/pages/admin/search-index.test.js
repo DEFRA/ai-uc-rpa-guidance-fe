@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 
 const {
   mockGetManifest,
-  mockGetGuideContent,
+  mockGetGuideSections,
   mockGetGuideSection,
   mockListSummaries,
   mockRebuildSummaries,
@@ -12,7 +12,7 @@ const {
   mockCancelSummaryRebuild
 } = vi.hoisted(() => ({
   mockGetManifest: vi.fn(),
-  mockGetGuideContent: vi.fn(),
+  mockGetGuideSections: vi.fn(),
   mockGetGuideSection: vi.fn(),
   mockListSummaries: vi.fn(),
   mockRebuildSummaries: vi.fn(),
@@ -23,7 +23,7 @@ const {
 
 vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
   getPrototypeGuidesManifest: mockGetManifest,
-  getPrototypeGuideContent: mockGetGuideContent,
+  getPrototypeGuideSections: mockGetGuideSections,
   getPrototypeGuideSection: mockGetGuideSection,
   listSummaries: mockListSummaries,
   rebuildSummaries: mockRebuildSummaries,
@@ -698,9 +698,14 @@ describe('#prototypeGuideReaderController', () => {
 
   test('Should show a whole guide at the path the index links to', async () => {
     mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
-    mockGetGuideContent.mockResolvedValueOnce({
+    mockGetGuideSections.mockResolvedValueOnce({
       ok: true,
-      data: '# A Guide\n\n## 1 Background\n\nWhy it matters.\n'
+      data: {
+        introduction: '# A Guide\n',
+        sections: [
+          { number: '1', heading: 'Background', level: 1, markdown: '## 1 Background\n\nWhy it matters.\n' }
+        ]
+      }
     })
 
     const { statusCode, payload } = await server.inject({
