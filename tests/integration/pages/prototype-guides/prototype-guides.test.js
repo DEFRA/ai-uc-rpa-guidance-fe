@@ -1,9 +1,9 @@
 import { constants as statusCodes } from 'node:http2'
 import { vi } from 'vitest'
 
-const { mockGetManifest, mockGetContent, mockGetAsset, mockPurge, mockInitiateUpload } = vi.hoisted(() => ({
+const { mockGetManifest, mockGetSections, mockGetAsset, mockPurge, mockInitiateUpload } = vi.hoisted(() => ({
   mockGetManifest: vi.fn(),
-  mockGetContent: vi.fn(),
+  mockGetSections: vi.fn(),
   mockGetAsset: vi.fn(),
   mockPurge: vi.fn(),
   mockInitiateUpload: vi.fn()
@@ -11,7 +11,7 @@ const { mockGetManifest, mockGetContent, mockGetAsset, mockPurge, mockInitiateUp
 
 vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
   getPrototypeGuidesManifest: mockGetManifest,
-  getPrototypeGuideContent: mockGetContent,
+  getPrototypeGuideSections: mockGetSections,
   getPrototypeGuideAsset: mockGetAsset,
   purgePrototypeGuides: mockPurge,
   initiatePrototypeGuidesUpload: mockInitiateUpload
@@ -272,25 +272,139 @@ describe('#prototypeGuidesController', () => {
   })
 
   describe('GET /prototype-guides/{documentId}', () => {
-    test('Should render the guide with its pictures served by this app', async () => {
-      mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
-      mockGetContent.mockResolvedValueOnce({
-        ok: true,
-        data: `# Claims Guide\n\n## 1 Introduction\n\n![](../assets/${ASSET_ID})\n`
-      })
+    const guideSections = {
+      introduction: '# Claims Guide\n\nRead this first.\n',
+      sections: [
+        { number: '1', heading: 'Introduction', level: 1, markdown: `## 1 Introduction\n\n![](../assets/${ASSET_ID})\n` },
+        { number: '1.1', heading: 'Scope', level: 2, markdown: '### 1.1 Scope\n\nWho it is for.\n' },
+        { number: '2', heading: 'Checking', level: 1, markdown: '## 2 Checking\n\nHow to check.\n' },
+        { number: 'annex-a', heading: 'Annex A', level: 1, markdown: '## Annex A\n\nThe annex.\n' }
+      ]
+    }
 
-      const { statusCode, payload } = await server.inject({
-        method: 'GET',
-        url: `/prototype-guides/${DOCUMENT_ID}`
-      })
+    const view = async (query = '') => {
+      mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
+      mockGetSections.mockResolvedValueOnce({ ok: true, data: guideSections })
+
+      return server.inject({ method: 'GET', url: `/prototype-guides/${DOCUMENT_ID}${query}` })
+    }
+
+    // The outline, apart from the guide, to tell its links from the guide's text.
+    const outlineOf = (payload) => payload.slice(payload.indexOf('<nav class="app-toc'), payload.indexOf('</nav>', payload.indexOf('<nav class="app-toc')))
+
+    test('Should render the whole guide by default, each section where its outline links', async () => {
+      const { statusCode, payload } = await view()
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-      expect(mockGetContent).toHaveBeenCalledWith(DOCUMENT_ID)
-      expect(payload).toContain('1 Introduction')
+      expect(mockGetSections).toHaveBeenCalledWith(DOCUMENT_ID)
+      expect(payload).toContain('Read this first.')
+      for (const id of ['section-1', 'section-1.1', 'section-2', 'section-annex-a']) {
+        expect(payload).toContain(`id="${id}"`)
+      }
+      expect(payload).toContain('How to check.')
+      expect(payload).toContain('The annex.')
+    })
+
+    test('Should serve the guide\'s pictures from this app', async () => {
+      const { payload } = await view()
+
       expect(payload).toContain(`src="/prototype-guides/${DOCUMENT_ID}/assets/${ASSET_ID}"`)
       expect(payload).not.toContain('../assets/')
-      // The title is the page's own heading, not repeated from the content.
+    })
+
+    test('Should show the title once, as the page\'s own heading', async () => {
+      const { payload } = await view()
+
       expect(payload.match(/>Claims Guide</g)).toHaveLength(2) // heading + breadcrumb
+    })
+
+    test('Should outline every section at every depth, linking within the page', async () => {
+      const outline = outlineOf((await view()).payload)
+
+      expect(outline).toContain('href="#section-1"')
+      expect(outline).toContain('href="#section-1.1"')
+      expect(outline).toContain('href="#section-2"')
+      expect(outline).toContain('href="#section-annex-a"')
+      expect(outline).toContain('app-toc--full')
+      expect(outline).toContain('data-module="guide-outline"')
+    })
+
+    test('Should not show an unnumbered section\'s slug as its number', async () => {
+      const outline = outlineOf((await view()).payload)
+
+      expect(outline).not.toContain('>annex-a<')
+      expect(outline).toContain('Annex A')
+    })
+
+    test('Should offer the stepper from the whole guide', async () => {
+      const { payload } = await view()
+
+      expect(payload).toMatch(/<a[^>]*href="\?view=steps"[^>]*>\s*Stepper/)
+      expect(payload).toMatch(/<a[^>]*aria-current="true"[^>]*>\s*Traditional/)
+    })
+
+    test('Should show the first top-level section and its subsections as step 1', async () => {
+      const { statusCode, payload } = await view('?view=steps')
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(payload).toContain('Step 1 of 3')
+      expect(payload).toContain('Read this first.')
+      expect(payload).toContain('id="section-1"')
+      expect(payload).toContain('Who it is for.')
+      expect(payload).not.toContain('How to check.')
+      expect(payload).toMatch(/<a[^>]*href="\?view=steps&amp;step=2"[^>]*rel="next"/)
+      expect(payload).toContain('2 Checking')
+    })
+
+    test('Should show a later step without the introduction, with the way back', async () => {
+      const { payload } = await view('?view=steps&step=3')
+
+      expect(payload).toContain('Step 3 of 3')
+      expect(payload).toContain('The annex.')
+      expect(payload).not.toContain('Read this first.')
+      expect(payload).toMatch(/<a[^>]*href="\?view=steps&amp;step=2"[^>]*rel="prev"/)
+      expect(payload).not.toContain('rel="next"')
+    })
+
+    test('Should mark the step\'s own sections current in the outline, and link the others to their step', async () => {
+      const outline = outlineOf((await view('?view=steps&step=2')).payload)
+
+      expect(outline).toMatch(/<a[^>]*app-toc__link--current[^>]*href="#section-2"/)
+      expect(outline).toContain('href="?view=steps&amp;step=1#section-1.1"')
+      expect(outline).toContain('href="?view=steps&amp;step=3#section-annex-a"')
+      expect(outline).toContain('data-module="guide-step-outline"')
+    })
+
+    test('Should offer the whole guide from the stepper', async () => {
+      const { payload } = await view('?view=steps&step=2')
+
+      expect(payload).toMatch(/<a[^>]*href="\?view=whole"[^>]*>\s*Traditional/)
+      expect(payload).toMatch(/<a[^>]*aria-current="true"[^>]*>\s*Stepper/)
+    })
+
+    test('Should put Next above Previous, above the step, so Next stays put from step to step', async () => {
+      const { payload } = await view('?view=steps&step=2')
+
+      const next = payload.indexOf('rel="next"')
+      const previous = payload.indexOf('rel="prev"')
+      const step = payload.indexOf('How to check.')
+
+      expect(next).toBeGreaterThan(-1)
+      expect(next).toBeLessThan(previous)
+      expect(previous).toBeLessThan(step)
+    })
+
+    test('Should not show the manifest\'s details', async () => {
+      const { payload } = await view()
+
+      expect(payload).not.toContain('Manifest details')
+      expect(payload).not.toContain(VERSION_ID)
+    })
+
+    test('Should 404 for a step the guide does not have', async () => {
+      const { statusCode } = await view('?view=steps&step=4')
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
     })
 
     test('Should 404 for a guide not in the manifest', async () => {
@@ -302,12 +416,12 @@ describe('#prototypeGuidesController', () => {
       })
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
-      expect(mockGetContent).not.toHaveBeenCalled()
+      expect(mockGetSections).not.toHaveBeenCalled()
     })
 
     test('Should 404 when the guide content is missing', async () => {
       mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
-      mockGetContent.mockResolvedValueOnce(notFound)
+      mockGetSections.mockResolvedValueOnce(notFound)
 
       const { statusCode } = await server.inject({
         method: 'GET',
@@ -393,7 +507,7 @@ describe('#prototypeGuidesPage', () => {
 
   test('Should call a guide page Prototype guidance in its title and breadcrumbs', async () => {
     mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
-    mockGetContent.mockResolvedValueOnce({ ok: true, data: '# Claims Guide\n\nBody.' })
+    mockGetSections.mockResolvedValueOnce({ ok: true, data: { introduction: '# Claims Guide\n\nBody.\n', sections: [] } })
 
     const { payload } = await server.inject({ method: 'GET', url: `/prototype-guides/${DOCUMENT_ID}` })
 

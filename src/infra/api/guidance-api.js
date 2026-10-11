@@ -102,9 +102,10 @@ async function getPrototypeGuidesManifest () {
   })
 }
 
-async function getPrototypeGuideContent (documentId) {
-  return request(`/prototype/guides/${encodeURIComponent(documentId)}/content`, {
-    responseType: 'text',
+// The latest version cut into its sections: the text before the first, then
+// each section's number, heading, level and Markdown, in order.
+async function getPrototypeGuideSections (documentId) {
+  return request(`/prototype/guides/${encodeURIComponent(documentId)}/sections`, {
     expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
   })
 }
@@ -241,7 +242,7 @@ export {
   updateDocumentSection,
   getDocumentImage,
   getPrototypeGuidesManifest,
-  getPrototypeGuideContent,
+  getPrototypeGuideSections,
   getPrototypeGuideSection,
   getPrototypeGuideAsset,
   purgePrototypeGuides,

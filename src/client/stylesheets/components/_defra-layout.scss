@@ -22,9 +22,11 @@
   overflow-x: visible;
 }
 
+// Clip, not hidden: hidden makes the body a scroll container of its own, which
+// never scrolls, so nothing on the page could stay in view with position: sticky.
 html,
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 

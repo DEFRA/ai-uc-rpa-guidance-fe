@@ -112,7 +112,8 @@ function getUploadForm (request, h) {
 }
 
 /**
- * One guide's latest version, rendered.
+ * One guide's latest version, rendered whole or as one step: a top-level
+ * section and its subsections.
  *
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
@@ -125,7 +126,13 @@ async function getPrototypeGuideView (request, h) {
     throw Boom.notFound('Prototype guide not found')
   }
 
-  return h.view('prototype-guides/guide.njk', prototypeGuideViewModel(found))
+  const viewModel = prototypeGuideViewModel(found, request.query)
+
+  if (!viewModel) {
+    throw Boom.notFound('Prototype guide step not found')
+  }
+
+  return h.view('prototype-guides/guide.njk', viewModel)
     .code(statusCodes.HTTP_STATUS_OK)
 }
 
