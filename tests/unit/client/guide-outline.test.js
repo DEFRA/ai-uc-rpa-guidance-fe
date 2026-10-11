@@ -74,6 +74,19 @@ describe('#highlightSectionInView', () => {
     expect(current()).toEqual(['#section-1'])
   })
 
+  test('Should scroll the outline, not the page, to keep the highlighted link in it', () => {
+    const outline = render()
+    let scrollTop = 0
+    Object.defineProperty(outline, 'scrollTop', { get: () => scrollTop, set: (value) => { scrollTop = value } })
+    outline.getBoundingClientRect = () => ({ top: 0, bottom: 300 })
+    outline.querySelector('[href="#section-2"]').getBoundingClientRect = () => ({ top: 400, bottom: 430 })
+    stop = highlightSectionInView(outline, window)
+
+    scrollTo({ 'section-1': -2000, 'section-1.1': -900, 'section-2': 50 })
+
+    expect(scrollTop).toBe(430 - 300)
+  })
+
   test('Should stop following the scroll when stopped', () => {
     highlightSectionInView(render(), window)()
 

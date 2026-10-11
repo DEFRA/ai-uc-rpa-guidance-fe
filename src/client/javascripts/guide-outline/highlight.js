@@ -128,14 +128,13 @@ function revealCurrentStep (outline, win = globalThis.window) {
   const first = links[0].getBoundingClientRect()
   const last = links.at(-1).getBoundingClientRect()
 
-  // As far as brings the first link to the top, and no further.
+  // How far brings the first link to the top, and how far the last to the bottom.
   const toFirst = first.top - top - SCROLL_MARGIN_PX
+  const toLast = last.bottom + SCROLL_MARGIN_PX - bottom
 
-  if (first.top < top) {
-    outline.scrollTop += toFirst
-  } else if (last.bottom > bottom) {
-    outline.scrollTop += Math.min(last.bottom + SCROLL_MARGIN_PX - bottom, toFirst)
-  }
+  // Back up to the first link when it is above; otherwise down only as far as
+  // shows the last, never past the first, and not at all when both show.
+  outline.scrollTop += first.top < top ? toFirst : Math.max(Math.min(toLast, toFirst), 0)
 }
 
 /**
@@ -148,11 +147,12 @@ function keepInView (outline, link) {
   const box = outline.getBoundingClientRect()
   const rect = link.getBoundingClientRect()
 
-  if (rect.top < box.top) {
-    outline.scrollTop -= box.top - rect.top
-  } else if (rect.bottom > box.bottom) {
-    outline.scrollTop += rect.bottom - box.bottom
-  }
+  // Up by as much as the link is above the outline, or down by as much as it
+  // is below; nothing when it is inside.
+  const above = Math.min(rect.top - box.top, 0)
+  const below = Math.max(rect.bottom - box.bottom, 0)
+
+  outline.scrollTop += above || below
 }
 
 export {
