@@ -318,6 +318,35 @@ describe('#prototypeGuidesController', () => {
       expect(payload.match(/>Claims Guide</g)).toHaveLength(2) // heading + breadcrumb
     })
 
+    test.each([
+      ['whole', ''],
+      ['in steps', '?view=steps&step=2']
+    ])('Should offer a search for keywords in the guide, read %s, taking the find shortcut', async (_name, query) => {
+      const { payload } = await view(query)
+
+      expect(payload).toContain('data-module="keyword-search"')
+      expect(payload).toContain('placeholder="Search for keywords in this document"')
+      expect(payload).toMatch(/<input[^>]*data-module="search-shortcut"[^>]*>/)
+      expect(payload).toContain('data-keyword-search-status')
+    })
+
+    test.each([
+      ['whole', '?keywords=land%20use'],
+      ['in steps', '?view=steps&step=2&keywords=land%20use']
+    ])('Should open the guide, read %s, with the search it was sent with in the box', async (_name, query) => {
+      const { statusCode, payload } = await view(query)
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(payload).toMatch(/<input[^>]*name="keywords"[^>]*value="land use"/)
+    })
+
+    test('Should open a step at its last match, as going back through the matches does', async () => {
+      const { statusCode, payload } = await view('?view=steps&step=2&keywords=land&match=last')
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(payload).toMatch(/<input[^>]*name="keywords"[^>]*value="land"/)
+    })
+
     test('Should outline every section at every depth, linking within the page', async () => {
       const outline = outlineOf((await view()).payload)
 

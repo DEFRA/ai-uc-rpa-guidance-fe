@@ -1,5 +1,8 @@
 {% extends "common/layout.njk" %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
 {% import "components/toc-nav/macro.njk" as tocNav %}
 
 {% block content %}
@@ -16,6 +19,31 @@
           </a>
         {% endfor %}
       </div>
+
+      {# Finds keywords in this guide only, so the browser's find shortcut
+         comes here (client/javascripts/keyword-search/highlight.js). It stays
+         in view as the reader scrolls, to show what they are looking for. #}
+      <form class="app-keyword-search" role="search" data-module="keyword-search">
+        <div class="app-keyword-search__bar">
+          {{ govukInput({
+            id: "keywords",
+            name: "keywords",
+            type: "search",
+            value: keywords,
+            label: {
+              text: "Search for keywords in this document",
+              classes: "govuk-visually-hidden"
+            },
+            attributes: {
+              placeholder: "Search for keywords in this document",
+              "data-module": "search-shortcut"
+            },
+            formGroup: { classes: "app-keyword-search__field" }
+          }) }}
+          {{ govukButton({ text: "Search", classes: "app-keyword-search__button" }) }}
+        </div>
+        <p class="govuk-body-s app-keyword-search__status" role="status" data-keyword-search-status></p>
+      </form>
 
       <div class="govuk-grid-row app-guide-layout">
         <div class="govuk-grid-column-one-third">

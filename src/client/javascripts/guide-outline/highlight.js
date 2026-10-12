@@ -5,13 +5,20 @@ const READING_LINE = 0.25
 
 const CURRENT = 'app-toc__link--current'
 
+// A keyword search's current match (client/javascripts/keyword-search), and
+// what the search sends each time it moves to one.
+const CURRENT_MATCH = 'mark.app-keyword-match--current'
+const MATCH_EVENT = 'keyword-search:match'
+
 // Room left above a step's first link when the outline scrolls to it.
 const SCROLL_MARGIN_PX = 16
 
 /**
  * Keep a guide's outline in step with the reader of the whole guide: the
  * section whose heading was last scrolled past is highlighted, and said to be
- * the reader's location, until the next one arrives.
+ * the reader's location, until the next one arrives. While a keyword search's
+ * current match is in sight, the section holding it is highlighted instead,
+ * as the match is what the reader is looking at.
  *
  * @param {HTMLElement | null} outline The element marked
  *   data-module="guide-outline", or null for none.
@@ -41,7 +48,7 @@ function highlightSectionInView (outline, win = globalThis.window) {
     keepInView(outline, current.link)
   }
 
-  const update = () => {
+  const atReadingLine = () => {
     const line = win.innerHeight * READING_LINE
     let reading = entries[0]
 
@@ -52,18 +59,35 @@ function highlightSectionInView (outline, win = globalThis.window) {
       reading = entry
     }
 
+    return reading
+  }
+
+  const holdingMatch = () => {
+    const match = outline.ownerDocument.querySelector(CURRENT_MATCH)
+    const box = match?.getBoundingClientRect()
+    const inSight = box && box.top >= 0 && box.bottom <= win.innerHeight
+
+    return inSight ? entries.find((entry) => entry.section.contains(match)) : undefined
+  }
+
+  const update = () => {
+    const reading = holdingMatch() ?? atReadingLine()
+
     if (reading && reading !== current) {
       show(reading)
     }
   }
 
+  const doc = outline.ownerDocument
   win.addEventListener('scroll', update, { passive: true })
   win.addEventListener('resize', update)
+  doc.addEventListener(MATCH_EVENT, update)
   update()
 
   return () => {
     win.removeEventListener('scroll', update)
     win.removeEventListener('resize', update)
+    doc.removeEventListener(MATCH_EVENT, update)
   }
 }
 
@@ -158,5 +182,6 @@ function keepInView (outline, link) {
 export {
   fitOutlineToWindow,
   highlightSectionInView,
+  keepInView,
   revealCurrentStep
 }

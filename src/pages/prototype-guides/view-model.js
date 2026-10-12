@@ -240,10 +240,10 @@ function outlineOf (sections, hrefOf, isCurrent) {
  * One guide's latest version, whole or one step at a time, with its outline.
  *
  * @param {{ guide: object, introduction: string, sections: object[] }} found
- * @param {{ view?: 'whole' | 'steps', step?: number }} [options]
+ * @param {{ view?: 'whole' | 'steps', step?: number, keywords?: string }} [options]
  * @returns {object | null} Null for a step the guide does not have.
  */
-function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WHOLE, step = 1 } = {}) {
+function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WHOLE, step = 1, keywords = '' } = {}) {
   const steps = stepsOf(sections)
   const stepping = view === STEPS
 
@@ -272,6 +272,7 @@ function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WH
   return {
     pageTitle: `${guide.title} - ${LIST_TITLE}`,
     title: guide.title,
+    keywords,
     // The page prints the title itself, from the manifest, so the guide's own
     // copy of it is dropped rather than shown twice.
     introductionHtml: !stepping || step === 1

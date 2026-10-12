@@ -87,6 +87,47 @@ describe('#highlightSectionInView', () => {
     expect(scrollTop).toBe(430 - 300)
   })
 
+  describe('with a keyword search\'s current match', () => {
+    // Section 1's heading has passed the reading line; the match, in section
+    // 2, is in sight below it, with section 2's heading not yet at the line.
+    const showMatch = (matchTop) => {
+      const mark = document.createElement('mark')
+      mark.className = 'app-keyword-match app-keyword-match--current'
+      mark.textContent = 'land'
+      mark.getBoundingClientRect = () => ({ top: matchTop, bottom: matchTop + 20 })
+      document.getElementById('section-2').append(mark)
+      document.dispatchEvent(new window.CustomEvent('keyword-search:match'))
+    }
+
+    beforeEach(() => {
+      Object.assign(tops, { 'section-1': -1000, 'section-1.1': -500, 'section-2': 600 })
+    })
+
+    test('Should highlight the section holding the match while the match is in sight', () => {
+      stop = highlightSectionInView(render(), window)
+
+      showMatch(700)
+
+      expect(current()).toEqual(['#section-2'])
+    })
+
+    test('Should keep to the match\'s section as the page scrolls, while the match is in sight', () => {
+      stop = highlightSectionInView(render(), window)
+      showMatch(700)
+
+      scrollTo({})
+
+      expect(current()).toEqual(['#section-2'])
+    })
+
+    test('Should follow the scroll again once the match is out of sight', () => {
+      stop = highlightSectionInView(render(), window)
+      showMatch(900)
+
+      expect(current()).toEqual(['#section-1.1'])
+    })
+  })
+
   test('Should stop following the scroll when stopped', () => {
     highlightSectionInView(render(), window)()
 

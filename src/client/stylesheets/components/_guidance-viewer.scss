@@ -4,7 +4,8 @@
 .app-toc {
   @include govuk-media-query($from: desktop) {
     position: sticky;
-    top: govuk-spacing(3);
+    // Below a guide's keyword search, which stays in view above it.
+    top: calc(var(--app-keyword-search-height, 0px) + #{govuk-spacing(3)});
     max-height: calc(100vh - #{govuk-spacing(6)});
     overflow-y: auto;
   }
@@ -104,6 +105,65 @@
     box-shadow: inset govuk-spacing(1) 0 0 $govuk-link-colour;
     padding-left: govuk-spacing(2);
     margin-left: -#{govuk-spacing(2)};
+  }
+}
+
+// Keyword search in a guide: each match, and each section in the outline
+// with a match, in the GOV.UK focus yellow.
+.app-keyword-match {
+  background-color: $govuk-focus-colour;
+  color: $govuk-text-colour;
+}
+
+.app-toc__link--match {
+  background-color: $govuk-focus-colour;
+}
+
+// It stays at the top of the window as the reader scrolls the guide, so they
+// can see what they are searching for, with the button beside the box.
+.app-keyword-search {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  margin-bottom: govuk-spacing(6);
+  padding: govuk-spacing(2) 0;
+  background-color: govuk-colour('white');
+}
+
+// A section opened by its address, as the stepper opens the next match's,
+// starts below the search box rather than under it.
+.app-guide-section {
+  scroll-margin-top: calc(var(--app-keyword-search-height, 0px) + #{govuk-spacing(3)});
+}
+
+.app-keyword-search__bar {
+  display: flex;
+  align-items: flex-start;
+  gap: govuk-spacing(2);
+  max-width: 40em;
+}
+
+.app-keyword-search__field {
+  flex-grow: 1;
+  margin-bottom: 0;
+}
+
+.app-keyword-search__button {
+  margin-bottom: 0;
+}
+
+// The match the search has brought into view, set apart from the others as
+// GOV.UK marks focus.
+.app-keyword-match--current {
+  box-shadow: 0 -2px $govuk-focus-colour, 0 4px $govuk-focus-text-colour;
+}
+
+// Kept in the page, so screen readers announce what goes into it.
+.app-keyword-search__status {
+  margin: govuk-spacing(1) 0 0;
+
+  &:empty {
+    margin: 0;
   }
 }
 

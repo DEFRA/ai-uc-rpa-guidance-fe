@@ -1,6 +1,7 @@
 import * as govukFrontend from 'govuk-frontend'
 
 import { fitOutlineToWindow, highlightSectionInView, revealCurrentStep } from './guide-outline/highlight.js'
+import { findKeywords } from './keyword-search/highlight.js'
 import { followRebuildProgress } from './rebuild-progress/follow.js'
 import { trapFindShortcut } from './search-shortcut/trap.js'
 
@@ -17,3 +18,10 @@ const guideStepOutline = document.querySelector('[data-module="guide-step-outlin
 fitOutlineToWindow(guideOutline ?? guideStepOutline)
 highlightSectionInView(guideOutline)
 revealCurrentStep(guideStepOutline)
+
+// Finding keywords in a guide, with its outline to mark the sections found.
+findKeywords(document.querySelector('[data-module="keyword-search"]'), {
+  input: document.querySelector('[data-module="keyword-search"] input'),
+  content: document.querySelector('.app-guidance-content'),
+  outline: guideOutline ?? guideStepOutline
+})
