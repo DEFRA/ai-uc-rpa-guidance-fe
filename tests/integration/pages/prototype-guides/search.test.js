@@ -1,15 +1,17 @@
 import { constants as statusCodes } from 'node:http2'
 import { vi } from 'vitest'
 
-const { mockListDocuments, mockGetManifest, mockSearchGuidance } = vi.hoisted(() => ({
+const { mockListDocuments, mockGetManifest, mockGetSections, mockSearchGuidance } = vi.hoisted(() => ({
   mockListDocuments: vi.fn(),
   mockGetManifest: vi.fn(),
+  mockGetSections: vi.fn(),
   mockSearchGuidance: vi.fn()
 }))
 
 vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
   listDocuments: mockListDocuments,
   getPrototypeGuidesManifest: mockGetManifest,
+  getPrototypeGuideSections: mockGetSections,
   searchGuidance: mockSearchGuidance,
   initiateUpload: vi.fn(),
   getDocument: vi.fn()
@@ -18,6 +20,9 @@ vi.mock('../../../../src/infra/api/guidance-api.js', () => ({
 import { createServer } from '../../../../src/server/server.js'
 
 const DOCUMENT_ID = '11111111-1111-1111-1111-111111111111'
+
+// "what is sda?", which reads as a question for the AI search.
+const QUESTION = 'what%20is%20sda%3F'
 
 const result = (overrides = {}) => ({
   documentId: DOCUMENT_ID,
@@ -126,23 +131,24 @@ describe('#prototypeGuidesSearch', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/prototype-guides?q=sda'
+      url: `/prototype-guides?q=${QUESTION}`
     })
 
     expect(payload.indexOf('3.2 SDA status')).toBeLessThan(payload.indexOf('Guides in the manifest'))
-    expect(payload).toContain('value="sda"')
+    expect(payload).toContain('value="what is sda?"')
   })
 
-  test('Should engage the search agent with what was typed', async () => {
+  test('Should engage the search agent with a question', async () => {
     mockSearchGuidance.mockResolvedValueOnce(search())
 
     const { statusCode } = await server.inject({
       method: 'GET',
-      url: '/prototype-guides?q=sda%20status'
+      url: '/prototype-guides?q=how%20do%20I%20check%20sda%20status'
     })
 
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-    expect(mockSearchGuidance).toHaveBeenCalledWith('sda status')
+    expect(mockSearchGuidance).toHaveBeenCalledWith('how do I check sda status')
+    expect(mockGetSections).not.toHaveBeenCalled()
   })
 
   test('Should show the AI summary above the results, with its sources', async () => {
@@ -150,7 +156,7 @@ describe('#prototypeGuidesSearch', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/prototype-guides?q=sda'
+      url: `/prototype-guides?q=${QUESTION}`
     })
 
     expect(payload).toContain('AI summary')
@@ -164,7 +170,7 @@ describe('#prototypeGuidesSearch', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/prototype-guides?q=sda'
+      url: `/prototype-guides?q=${QUESTION}`
     })
 
     expect(payload).toContain('1 result')
@@ -178,7 +184,7 @@ describe('#prototypeGuidesSearch', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/prototype-guides?q=sda'
+      url: `/prototype-guides?q=${QUESTION}`
     })
 
     expect(payload).not.toContain('AI summary')
@@ -192,11 +198,11 @@ describe('#prototypeGuidesSearch', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/prototype-guides?q=nothing%20matches'
+      url: '/prototype-guides?q=what%20matches%20nothing%3F'
     })
 
     expect(payload).toContain('No results')
-    expect(payload).toContain('nothing matches')
+    expect(payload).toContain('what matches nothing?')
   })
 
   test('Should link a whole-document result by its title', async () => {
@@ -215,7 +221,7 @@ describe('#prototypeGuidesSearch', () => {
 
     const { payload } = await server.inject({
       method: 'GET',
-      url: '/prototype-guides?q=a%20guide'
+      url: '/prototype-guides?q=what%20is%20a%20guide'
     })
 
     expect(payload).toContain('A Guide')
@@ -231,5 +237,67 @@ describe('#prototypeGuidesSearch', () => {
     expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
     expect(payload).not.toContain('No results')
     expect(mockSearchGuidance).not.toHaveBeenCalled()
+  })
+
+  describe('with words to find rather than a question', () => {
+    const sections = {
+      introduction: '# Claims Guide\n\nAbout SDA.\n',
+      sections: [
+        { number: '3', heading: 'Land', level: 1, markdown: '## 3 Land\n\nCheck the SDA status once.\n' },
+        { number: '3.2', heading: 'SDA status', level: 2, markdown: '### 3.2 SDA status\n\nThe SDA status, and SDA rules.\n' },
+        { number: '4', heading: 'Letters', level: 1, markdown: '## 4 Letters\n\nNothing here.\n' }
+      ]
+    }
+
+    const find = async (words) => {
+      mockGetSections.mockResolvedValue({ ok: true, data: sections })
+
+      return server.inject({ method: 'GET', url: `/prototype-guides?q=${words}` })
+    }
+
+    test('Should search every guide\'s sections, not engage the search agent', async () => {
+      const { statusCode } = await find('sda%20status')
+
+      expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+      expect(mockSearchGuidance).not.toHaveBeenCalled()
+      expect(mockGetSections).toHaveBeenCalledWith(DOCUMENT_ID)
+    })
+
+    test('Should show no AI summary', async () => {
+      const { payload } = await find('sda%20status')
+
+      expect(payload).not.toContain('AI summary')
+    })
+
+    test('Should list the sections holding the words, the most matches first, with how many', async () => {
+      const { payload } = await find('sda%20status')
+
+      expect(payload).toContain('2 results')
+      expect(payload.indexOf('3.2 SDA status')).toBeLessThan(payload.indexOf('3 Land'))
+      expect(payload).toContain('2 matches')
+      expect(payload).toMatch(/· 1 match\s*</)
+    })
+
+    test('Should open each result in the guide, searching for the same words, at its section', async () => {
+      const { payload } = await find('sda%20status')
+
+      // The section in the address too: the stepper must open at its step.
+      expect(payload).toContain(`href="/prototype-guides/${DOCUMENT_ID}?keywords=sda%20status&amp;section=3.2#section-3.2"`)
+      expect(payload).toContain(`href="/prototype-guides/${DOCUMENT_ID}?keywords=sda%20status&amp;section=3#section-3"`)
+    })
+
+    test('Should show the first sentence holding the words in each section, the words highlighted', async () => {
+      const { payload } = await find('sda%20status')
+
+      expect(payload).toContain('Check the <mark class="app-keyword-match">SDA status</mark> once.')
+      expect(payload).toContain('The <mark class="app-keyword-match">SDA status</mark>, and SDA rules.')
+    })
+
+    test('Should say so when no section holds the words', async () => {
+      const { payload } = await find('bovine')
+
+      expect(payload).toContain('No results')
+      expect(payload).toContain('bovine')
+    })
   })
 })

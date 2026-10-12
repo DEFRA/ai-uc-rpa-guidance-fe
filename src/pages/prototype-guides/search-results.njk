@@ -1,6 +1,36 @@
 {# The answer and results of a guidance search, for a page that sets query,
-   answer, results and searched. #}
-{% if searched %}
+   searchKind, answer, results, keywordResults and searched: a question has
+   an AI summary and the sections that answer it; words to find have the
+   sections holding them, the most matches first. #}
+{% if searched and searchKind == "keywords" %}
+  {% if keywordResults | length %}
+    <h2 class="govuk-heading-m">
+      {{ keywordResults | length }} result{{ "" if keywordResults | length == 1 else "s" }}
+    </h2>
+
+    {% for result in keywordResults %}
+      <div class="govuk-!-margin-bottom-6">
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-1">
+          <a class="govuk-link" href="{{ result.href }}">{{ result.label }}</a>
+        </h3>
+        <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-1">
+          {{ result.documentTitle }} · {{ result.matches }}
+        </p>
+        <p class="govuk-body">
+          {%- for part in result.snippet -%}
+            {%- if part.match %}<mark class="app-keyword-match">{{ part.text }}</mark>{% else %}{{ part.text }}{% endif -%}
+          {%- endfor -%}
+        </p>
+      </div>
+    {% endfor %}
+  {% else %}
+    <h2 class="govuk-heading-m">No results</h2>
+    <p class="govuk-body">
+      No section of any guide contains “{{ query }}”. Check the spelling, try
+      fewer words, or ask a question.
+    </p>
+  {% endif %}
+{% elif searched %}
   {% if answer %}
     <div class="govuk-inset-text">
       <h2 class="govuk-heading-m govuk-!-margin-bottom-2">AI summary</h2>

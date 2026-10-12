@@ -1,3 +1,4 @@
+import { matchesIn, searchTermOf } from '../../../common/keyword-matches.js'
 import { keepInView } from '../guide-outline/highlight.js'
 
 const MATCH = 'app-keyword-match'
@@ -11,50 +12,12 @@ const SECTION = 'section.app-guide-section'
 // Room left between a match brought into view and the edges of what shows.
 const SCROLL_MARGIN_PX = 16
 
-/**
- * The words of a search, each once, in lower case.
- *
- * @param {string} text
- * @returns {string[]}
- */
-function keywordsOf (text) {
-  const words = text.toLowerCase().split(/\s+/).filter(Boolean)
-
-  return [...new Set(words)]
-}
-
-/**
- * Where the keywords come in a piece of text, as [start, end) ranges in order,
- * merged where they overlap so each letter is highlighted once.
- *
- * @param {string} text
- * @param {string[]} keywords
- * @returns {Array<[number, number]>}
- */
-function rangesOf (text, keywords) {
-  const lower = text.toLowerCase()
-  const ranges = []
-
-  for (const keyword of keywords) {
-    for (let at = lower.indexOf(keyword); at !== -1; at = lower.indexOf(keyword, at + 1)) {
-      ranges.push([at, at + keyword.length])
-    }
-  }
-
-  ranges.sort((a, b) => a[0] - b[0])
-
-  return ranges.reduce((merged, range) => {
-    const last = merged.at(-1)
-
-    if (last && range[0] <= last[1]) {
-      last[1] = Math.max(last[1], range[1])
-    } else {
-      merged.push(range)
-    }
-
-    return merged
-  }, [])
-}
+// Elements that start a new line of text: words either side of one are
+// apart even with no space between them in the page, and a phrase does not
+// run on from one into the next.
+const BLOCK_BREAK = '\u0000' // neither a space nor part of a word
+const BLOCKS = 'p, li, h1, h2, h3, h4, h5, h6, td, th, dt, dd, caption, figcaption, blockquote, pre, ' +
+  'section, div, ul, ol, table, tr'
 
 /**
  * Every piece of text in an element.
@@ -74,53 +37,103 @@ function textsIn (root) {
 }
 
 /**
- * The ids of the sections of a guide that hold any of the keywords, in order.
+ * An element's text as one string, a break between blocks, with where each
+ * piece of text starts in it, so a match can cross bold or a link.
+ *
+ * @param {Element} root
+ * @returns {{ text: string, pieces: { node: Text, start: number }[] }}
+ */
+function textOf (root) {
+  const pieces = []
+  let text = ''
+  let lastBlock = null
+
+  for (const node of textsIn(root)) {
+    const block = node.parentElement.closest(BLOCKS)
+
+    if (text && block !== lastBlock) {
+      text += BLOCK_BREAK
+    }
+    pieces.push({ node, start: text.length })
+    text += node.data
+    lastBlock = block
+  }
+
+  return { text, pieces }
+}
+
+/**
+ * The ids of the sections of a guide that hold the search term, in order.
  *
  * @param {Element} content The guide's content.
- * @param {string[]} keywords
+ * @param {string} term As searchTermOf gives it.
  * @returns {string[]}
  */
-function sectionsMatching (content, keywords) {
+function sectionsMatching (content, term) {
   return Array.from(content.querySelectorAll(SECTION))
-    .filter((section) => rangesOf(section.textContent, keywords).length)
+    .filter((section) => matchesIn(textOf(section).text, term).length)
     .map((section) => section.id)
 }
 
 /**
- * Wrap each match of the keywords in a highlight.
+ * Which part of each piece of text each match covers: a match crossing bold
+ * or a link covers part of several.
+ *
+ * @param {{ node: Text, start: number }[]} pieces
+ * @param {Array<[number, number]>} matches
+ * @returns {Map<Text, Array<[number, number, number]>>} For each piece of
+ *   text, the [start, end) it has of each match, and that match's place.
+ */
+function coverOf (pieces, matches) {
+  const cover = new Map()
+
+  for (const [index, [start, end]] of matches.entries()) {
+    for (const { node, start: from } of pieces) {
+      const to = from + node.data.length
+
+      if (start < to && end > from) {
+        const parts = cover.get(node) ?? []
+        parts.push([Math.max(start, from) - from, Math.min(end, to) - from, index])
+        cover.set(node, parts)
+      }
+    }
+  }
+
+  return cover
+}
+
+/**
+ * Wrap each match of the search term in highlights: one, or one for each
+ * piece of text a match crosses.
  *
  * @param {Element} content
- * @param {string[]} keywords
- * @returns {HTMLElement[]} The highlights, in the order they come.
+ * @param {string} term As searchTermOf gives it.
+ * @returns {HTMLElement[][]} Each match's highlights, in the order they come.
  */
-function highlight (content, keywords) {
+function highlight (content, term) {
   const doc = content.ownerDocument
-  const marks = []
+  const { text, pieces } = textOf(content)
+  const found = matchesIn(text, term)
+  const matches = found.map(() => [])
 
-  for (const text of textsIn(content)) {
-    const ranges = rangesOf(text.data, keywords)
-
-    if (!ranges.length) {
-      continue
-    }
-
-    const pieces = doc.createDocumentFragment()
+  for (const [node, parts] of coverOf(pieces, found)) {
+    const replacement = doc.createDocumentFragment()
     let from = 0
 
-    for (const [start, end] of ranges) {
+    for (const [start, end, index] of parts) {
       const mark = doc.createElement('mark')
       mark.className = MATCH
-      mark.textContent = text.data.slice(start, end)
-      pieces.append(text.data.slice(from, start), mark)
-      marks.push(mark)
+      mark.textContent = node.data.slice(start, end)
+      replacement.append(node.data.slice(from, start), mark)
+      matches[index].push(mark)
       from = end
     }
 
-    pieces.append(text.data.slice(from))
-    text.replaceWith(pieces)
+    replacement.append(node.data.slice(from))
+    node.replaceWith(replacement)
   }
 
-  return marks
+  return matches
 }
 
 /**
@@ -246,10 +259,10 @@ function wholeGuideReader (readGuide) {
  * @param {boolean} back
  * @returns {string | undefined} The section's id, or none.
  */
-function otherStepSection (guide, content, keywords, back) {
+function otherStepSection (guide, content, term, back) {
   const order = Array.from(guide.querySelectorAll(SECTION)).map((section) => section.id)
   const here = Array.from(content.querySelectorAll(SECTION)).map((section) => order.indexOf(section.id))
-  const elsewhere = sectionsMatching(guide, keywords).filter((id) => !here.includes(order.indexOf(id)))
+  const elsewhere = sectionsMatching(guide, term).filter((id) => !here.includes(order.indexOf(id)))
 
   return back
     ? elsewhere.findLast((id) => order.indexOf(id) < Math.min(...here)) ?? elsewhere.at(-1)
@@ -280,7 +293,7 @@ class KeywordSearch {
     this.open = go ?? ((url) => this.doc.location.assign(url))
     this.latest = 0
     this.searched = ''
-    this.marks = []
+    this.matches = []
     this.current = -1
     this.sections = []
   }
@@ -290,32 +303,45 @@ class KeywordSearch {
   }
 
   show (index) {
-    this.marks[this.current]?.classList.remove(CURRENT_MATCH)
+    for (const piece of this.matches[this.current] ?? []) {
+      piece.classList.remove(CURRENT_MATCH)
+    }
     this.current = index
-    const mark = this.marks[index]
-    mark.classList.add(CURRENT_MATCH)
-    bringIntoView(mark, this.form, this.win)
+    for (const piece of this.matches[index]) {
+      piece.classList.add(CURRENT_MATCH)
+    }
+    this.reveal()
 
     // For the outline, which shows the reader where they are.
     this.doc.dispatchEvent(new this.win.CustomEvent('keyword-search:match'))
 
-    // The outline scrolls by itself, so its link to the match's section may
-    // be out of sight below (or above) what it shows.
+    const where = this.stepper ? ' in this step' : `, in ${counted(this.sections.length, 'section', 'sections')}`
+    this.status.textContent = `Match ${index + 1} of ${this.matches.length}${where}`
+  }
+
+  // Bring the current match into view, and its section's link in the
+  // outline, which scrolls by itself, so the link may be out of sight.
+  reveal () {
+    const mark = this.matches[this.current]?.[0]
+
+    if (!mark) {
+      return
+    }
+
+    bringIntoView(mark, this.form, this.win)
+
     const link = linkTo(this.outline, mark.closest(SECTION)?.id)
     if (link) {
       keepInView(this.outline, link)
     }
-
-    const where = this.stepper ? ' in this step' : `, in ${counted(this.sections.length, 'section', 'sections')}`
-    this.status.textContent = `Match ${index + 1} of ${this.marks.length}${where}`
   }
 
   // Open the step with the next match (or, going back, the match before),
   // at that match's section, taking the search with it. False when no other
   // step has a match, or the whole guide cannot be read.
-  async goToStep (keywords, back) {
+  async goToStep (term, back) {
     try {
-      const target = otherStepSection(await this.wholeGuide(), this.content, keywords, back)
+      const target = otherStepSection(await this.wholeGuide(), this.content, term, back)
       const link = target && linkTo(this.outline, target)
 
       if (!link) {
@@ -336,9 +362,9 @@ class KeywordSearch {
     }
   }
 
-  async markEverySection (keywords, searchNumber) {
+  async markEverySection (term, searchNumber) {
     try {
-      const everywhere = sectionsMatching(await this.wholeGuide(), keywords)
+      const everywhere = sectionsMatching(await this.wholeGuide(), term)
 
       // Unless a later search has taken over while the guide was fetched.
       if (searchNumber === this.latest) {
@@ -351,97 +377,112 @@ class KeywordSearch {
 
   // A new search, starting at the first match (or, going back, the last),
   // in the section named if it has one.
-  async search (keywords, { back = false, startAt } = {}) {
+  async search (term, { back = false, startAt } = {}) {
     this.latest += 1
     clearHighlights(this.content)
 
-    this.marks = highlight(this.content, keywords)
+    this.matches = highlight(this.content, term)
     this.current = -1
-    this.sections = sectionsMatching(this.content, keywords)
+    this.sections = sectionsMatching(this.content, term)
     markSections(this.outline, this.sections)
 
-    if (!keywords.length) {
+    if (!term) {
       this.status.textContent = ''
       return
     }
 
     if (this.stepper) {
-      this.markEverySection(keywords, this.latest).catch(handledInside)
+      this.markEverySection(term, this.latest).catch(handledInside)
     }
 
-    if (this.marks.length) {
+    if (this.matches.length) {
       this.show(this.startingMatch(back, startAt))
       return
     }
 
-    await this.lookElsewhere(keywords, back)
+    await this.lookElsewhere(term, back)
   }
 
   // The first match (or the last) in the section named, or in the step.
   startingMatch (back, startAt) {
-    const all = this.marks.map((_mark, index) => index)
-    const inSection = all.filter((index) => this.marks[index].closest(SECTION)?.id === startAt)
+    const all = this.matches.map((_mark, index) => index)
+    const inSection = all.filter((index) => this.matches[index][0].closest(SECTION)?.id === startAt)
     const candidates = inSection.length ? inSection : all
 
     return back ? candidates.at(-1) : candidates[0]
   }
 
   // Nothing here: in the stepper, try the other steps.
-  async lookElsewhere (keywords, back) {
+  async lookElsewhere (term, back) {
     const none = `No matches for ${this.words}`
     this.status.textContent = this.stepper ? 'No matches in this step. Looking in the other steps.' : none
 
-    if (this.stepper && !(await this.goToStep(keywords, back))) {
+    if (this.stepper && !(await this.goToStep(term, back))) {
       this.status.textContent = none
     }
   }
 
   // The next match (or, going back, the one before), in another step if this
   // step has no more, or round to the first (or the last).
-  async move (keywords, back) {
+  async move (term, back) {
     const index = this.current + (back ? -1 : 1)
 
-    if (index >= 0 && index < this.marks.length) {
+    if (index >= 0 && index < this.matches.length) {
       this.show(index)
       return
     }
 
-    const wentOn = this.stepper && (await this.goToStep(keywords, back))
+    const wentOn = this.stepper && (await this.goToStep(term, back))
 
-    if (!wentOn && this.marks.length) {
-      this.show(back ? this.marks.length - 1 : 0)
+    if (!wentOn && this.matches.length) {
+      this.show(back ? this.matches.length - 1 : 0)
     }
   }
 
   // The same words again move on; new words start a new search.
   async find (back) {
-    const keywords = keywordsOf(this.input.value)
-    const words = keywords.join(' ')
+    const term = searchTermOf(this.input.value)
 
-    if (words && words === this.searched) {
-      await this.move(keywords, back)
+    if (term && term === this.searched) {
+      await this.move(term, back)
       return
     }
 
-    this.searched = words
-    await this.search(keywords, { back })
+    this.searched = term
+    await this.search(term, { back })
   }
 
   // Opened with a search, as the stepper opens the step with the next match.
   async resume () {
-    const keywords = keywordsOf(this.input.value)
-    this.searched = keywords.join(' ')
+    const term = searchTermOf(this.input.value)
+    this.searched = term
     this.input.focus({ preventScroll: true })
 
-    await this.search(keywords, {
+    await this.search(term, {
       back: new URL(this.doc.location.href).searchParams.get('match') === 'last',
       startAt: decodeURIComponent(this.doc.location.hash.slice(1))
     })
+
+    // Until the page has loaded, the browser keeps jumping to the section the
+    // address names, which can leave the match below it out of sight; and a
+    // jump to a section, which cannot take focus, takes it from the search
+    // box, so Enter no longer moves on. Once the browser is done, bring the
+    // match back and put the reader back in the box.
+    if (this.doc.readyState !== 'complete') {
+      this.win.addEventListener('load', () => this.win.setTimeout(() => this.settle(), 0), { once: true })
+    }
+  }
+
+  settle () {
+    this.input.focus({ preventScroll: true })
+    this.reveal()
   }
 }
 
 /**
- * Find keywords in the guide on the page. Submitting the search box (with the
+ * Find keywords in the guide on the page: one word as a whole word, several
+ * as that whole phrase, in any case (common/keyword-matches.js, as the search
+ * of every guide counts them). Submitting the search box (with the
  * Enter key) highlights each match in the guide and, in its outline, each
  * section with a match, and brings the first match into view. Submitting the
  * same search again brings the next match into view, and the first after the
@@ -500,6 +541,5 @@ function findKeywords (form, parts) {
 
 export {
   findKeywords,
-  keywordsOf,
   sectionsMatching
 }
