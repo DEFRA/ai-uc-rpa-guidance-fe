@@ -7,9 +7,13 @@ import { homeCrumb } from '../common/breadcrumbs.js'
 const LIST_HREF = '/prototype-guides'
 const LIST_TITLE = 'Prototype guidance'
 
-// A guide reads whole, or one step (a top-level section) at a time.
+// A guide reads whole, or one step (a section) at a time.
 const WHOLE = 'whole'
 const STEPS = 'steps'
+const GUIDE_VIEWS = [WHOLE, STEPS]
+
+// Remembers the format the reader last chose.
+const GUIDE_VIEW_COOKIE = 'guideView'
 
 // What a cell shows when the manifest has no entry for its version.
 const MISSING = '-'
@@ -108,6 +112,28 @@ function notificationFor ({ purged, uploaded }) {
 }
 
 /**
+ * A section found by a keyword search, opening in its guide at that section,
+ * with the guide's own search for the same words.
+ *
+ * @param {{ documentId: string, documentTitle: string, sectionNumber: string, heading: string, matches: number, snippet: string }} result
+ * @param {string} query
+ * @returns {object}
+ */
+function keywordResult (result, query) {
+  const keywords = encodeURIComponent(query)
+
+  return {
+    label: sectionLabel({ number: result.sectionNumber, heading: result.heading }),
+    documentTitle: result.documentTitle,
+    snippet: result.snippet,
+    matches: `${result.matches} match${result.matches === 1 ? '' : 'es'}`,
+    // The section in the address as well: the stepper opens at its step.
+    href: `${guideHref(result.documentId)}?keywords=${keywords}&section=${encodeURIComponent(result.sectionNumber)}` +
+      `#${sectionAnchor(result.sectionNumber)}`
+  }
+}
+
+/**
  * @param {object[]} guides Manifest entries, each with its `name`.
  * @param {{ purged?: number, uploaded?: boolean }} [outcome]
  * @param {{ query?: string, search?: object | null }} [searched] What was
@@ -119,8 +145,10 @@ function prototypeGuidesViewModel (guides, outcome = {}, { query = '', search = 
     pageTitle: query ? `Search results for ${query} - ${LIST_TITLE}` : LIST_TITLE,
     notification: notificationFor(outcome),
     query,
-    answer: search?.answer ?? null,
-    results: search?.results ?? [],
+    answer: search?.kind === 'question' ? search.answer ?? null : null,
+    results: search?.kind === 'question' ? search.results ?? [] : [],
+    keywordResults: search?.kind === 'keywords' ? search.results.map((result) => keywordResult(result, query)) : [],
+    searchKind: search?.kind ?? null,
     searched: Boolean(search),
     hasGuides: guides.length > 0,
     rows: guides.map((guide) => {
@@ -183,24 +211,15 @@ function sectionAnchor (number) {
 }
 
 /**
- * The guide's steps: each top-level section with the subsections after it.
- * Subsections before the first top-level section join the first step, and a
- * guide without sections is one step: its introduction alone.
+ * The guide's steps: a step for each section, at any level, holding its own
+ * text and not its subsections'. A guide without sections is one step: its
+ * introduction alone.
  *
  * @param {object[]} sections
  * @returns {object[][]}
  */
 function stepsOf (sections) {
-  const steps = []
-
-  for (const section of sections) {
-    if (section.level === 1 || steps.length === 0) {
-      steps.push([])
-    }
-    steps.at(-1).push(section)
-  }
-
-  return steps.length ? steps : [[]]
+  return sections.length ? sections.map((section) => [section]) : [[]]
 }
 
 /**
@@ -237,15 +256,31 @@ function outlineOf (sections, hrefOf, isCurrent) {
 }
 
 /**
+ * The format to show a guide in: the one the address names, else the one
+ * the reader last chose (from its cookie), else the whole guide.
+ *
+ * @param {string | undefined} asked
+ * @param {string | undefined} remembered
+ * @returns {'whole' | 'steps'}
+ */
+function guideViewOf (asked, remembered) {
+  return [asked, remembered].find((view) => GUIDE_VIEWS.includes(view)) ?? WHOLE
+}
+
+/**
  * One guide's latest version, whole or one step at a time, with its outline.
  *
  * @param {{ guide: object, introduction: string, sections: object[] }} found
- * @param {{ view?: 'whole' | 'steps', step?: number, keywords?: string }} [options]
+ * @param {{ view?: 'whole' | 'steps', step?: number, section?: string, keywords?: string }} [options]
+ *   With no step, the stepper opens at the step holding the section named,
+ *   or the first.
  * @returns {object | null} Null for a step the guide does not have.
  */
-function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WHOLE, step = 1, keywords = '' } = {}) {
+function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WHOLE, step: asked, section, keywords = '' } = {}) {
   const steps = stepsOf(sections)
   const stepping = view === STEPS
+  const holding = steps.findIndex((stepSections) => stepSections.some((candidate) => candidate.number === section))
+  const step = asked ?? Math.max(holding + 1, 1)
 
   if (stepping && step > steps.length) {
     return null
@@ -366,6 +401,9 @@ function escapeHtml (value) {
 }
 
 export {
+  GUIDE_VIEW_COOKIE,
+  GUIDE_VIEWS,
+  guideViewOf,
   prototypeGuidesViewModel,
   prototypeGuideViewModel,
   prototypeGuideSectionViewModel,

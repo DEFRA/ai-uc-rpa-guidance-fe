@@ -3,6 +3,8 @@ import Boom from '@hapi/boom'
 import { config } from '../../config/config.js'
 import { statusCodes } from '../../constants/status-codes.js'
 import { searchGuidance } from '../../services/guidance-search.js'
+import { searchGuideSections } from '../../services/keyword-search.js'
+import { isQuestion } from '../../services/query-kind.js'
 import {
   getPrototypeGuide,
   getPrototypeGuideAsset,
@@ -12,6 +14,8 @@ import {
   startPrototypeGuidesUpload
 } from '../../services/prototype-guides.js'
 import {
+  GUIDE_VIEW_COOKIE,
+  guideViewOf,
   prototypeGuideViewModel,
   prototypeGuideSectionViewModel,
   prototypeGuidesViewModel,
@@ -35,12 +39,30 @@ const IMAGE_CONTENT_TYPES = {
 }
 
 /**
+ * A search of every guide: a question goes to the search agent, for an AI
+ * summary and the sections that answer it; words to find are counted in
+ * every guide's sections. Nothing typed is no search.
+ *
+ * @param {string} query
+ * @returns {Promise<object | null>}
+ */
+async function searchEveryGuide (query) {
+  if (!query) {
+    return null
+  }
+
+  return isQuestion(query)
+    ? { kind: 'question', ...(await searchGuidance(query)) }
+    : { kind: 'keywords', results: await searchGuideSections(query) }
+}
+
+/**
  * Every guide the API currently serves to the prototype, with the answer to a
  * search above them when one was asked.
  *
- * The search agent is engaged only when something was actually typed: an
- * empty box is a visit to the page, not a query, and running a corpus-wide
- * search for it would cost the operator half a minute for nothing.
+ * The search agent is engaged only for a question: an empty box is a visit to
+ * the page, not a query, and running a corpus-wide search for it would cost
+ * the operator half a minute for nothing.
  *
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
@@ -51,7 +73,7 @@ async function getPrototypeGuides (request, h) {
 
   const [guides, search] = await Promise.all([
     listPrototypeGuides(),
-    q ? searchGuidance(q) : null
+    searchEveryGuide(q)
   ])
 
   return h.view('prototype-guides/page.njk', prototypeGuidesViewModel(guides, outcome, { query: q, search }))
@@ -112,8 +134,7 @@ function getUploadForm (request, h) {
 }
 
 /**
- * One guide's latest version, rendered whole or as one step: a top-level
- * section and its subsections.
+ * One guide's latest version, rendered whole or as one step: one section.
  *
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
@@ -126,14 +147,32 @@ async function getPrototypeGuideView (request, h) {
     throw Boom.notFound('Prototype guide not found')
   }
 
-  const viewModel = prototypeGuideViewModel(found, request.query)
+  const view = guideViewOf(request.query.view, request.state[GUIDE_VIEW_COOKIE])
+  const viewModel = prototypeGuideViewModel(found, { ...request.query, view })
 
   if (!viewModel) {
     throw Boom.notFound('Prototype guide step not found')
   }
 
-  return h.view('prototype-guides/guide.njk', viewModel)
+  const response = h.view('prototype-guides/guide.njk', viewModel)
     .code(statusCodes.HTTP_STATUS_OK)
+
+  return choseFormat(request) ? response.state(GUIDE_VIEW_COOKIE, view) : response
+}
+
+/**
+ * Whether the reader chose a format: one named in the address of a page they
+ * opened. Not one a script asked for, as the stepper's search does to read
+ * the whole guide; browsers mark a page being opened as a navigation, and a
+ * browser too old to say is taken as opening one.
+ *
+ * @param {import('@hapi/hapi').Request} request
+ * @returns {boolean}
+ */
+function choseFormat (request) {
+  const mode = request.headers['sec-fetch-mode']
+
+  return Boolean(request.query.view) && (!mode || mode === 'navigate')
 }
 
 /**

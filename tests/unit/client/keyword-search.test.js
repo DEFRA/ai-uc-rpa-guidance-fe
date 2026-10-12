@@ -3,7 +3,6 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
   findKeywords,
-  keywordsOf,
   sectionsMatching
 } from '../../../src/client/javascripts/keyword-search/highlight.js'
 
@@ -87,21 +86,11 @@ async function search (elements, text) {
   await vi.waitFor(() => expect(status()).not.toBe(''))
 }
 
-describe('#keywordsOf', () => {
-  test('Should take each word once, in lower case, whatever the spacing', () => {
-    expect(keywordsOf('  Land   use LAND\tcheck ')).toEqual(['land', 'use', 'check'])
-  })
-
-  test('Should find no keywords in a blank search', () => {
-    expect(keywordsOf('   ')).toEqual([])
-  })
-})
-
 describe('#sectionsMatching', () => {
   test('Should name each section holding a keyword, in any case, without changing it', () => {
     const { content } = render()
 
-    expect(sectionsMatching(content, ['land'])).toEqual(['section-1', 'section-2'])
+    expect(sectionsMatching(content, 'land')).toEqual(['section-1', 'section-2'])
     expect(marked()).toEqual([])
   })
 })
@@ -121,16 +110,31 @@ describe('#findKeywords in the whole guide', () => {
     expect(marked()).toEqual(['Land', 'land', 'land'])
   })
 
-  test('Should highlight each of several keywords, wherever they are', async () => {
-    await search(elements, 'letter who')
+  test('Should match several words only as that whole phrase, even across bold', async () => {
+    await search(elements, 'LAND use')
 
-    expect(marked()).toEqual(['Who', 'Letter', 'letter'])
+    // One match, in two pieces: the bold "land" and the " use" after it.
+    expect(marked()).toEqual(['land', ' use'])
+    expect(status()).toBe('Match 1 of 1, in 1 section')
   })
 
-  test('Should highlight a match once where keywords overlap', async () => {
-    await search(elements, 'let letter')
+  test('Should mark every piece of a match crossing bold as the current match', async () => {
+    await search(elements, 'land use')
 
-    expect(marked()).toEqual(['Letter', 'letter'])
+    expect(document.querySelectorAll('mark.app-keyword-match--current')).toHaveLength(2)
+  })
+
+  test('Should match one word only as a whole word', async () => {
+    await search(elements, 'let')
+
+    expect(marked()).toEqual([])
+    expect(status()).toBe('No matches for let')
+  })
+
+  test('Should not run words in separate blocks together', async () => {
+    await search(elements, 'checks check')
+
+    expect(marked()).toEqual([])
   })
 
   test('Should keep the guide\'s text as it was, apart from the highlights', async () => {
@@ -328,6 +332,57 @@ describe('#findKeywords on a page opened with a search', () => {
 
     await vi.waitFor(() => expect(status()).toBe('Match 3 of 3, in 2 sections'))
     expect(currentMatch()).toBe(2)
+  })
+})
+
+describe('#findKeywords on a page still loading when opened with a search', () => {
+  afterEach(() => {
+    delete document.readyState
+    delete window.HTMLElement.prototype.getBoundingClientRect
+  })
+
+  test('Should bring the match into view again once the page has loaded, after the browser\'s own jump to the section', async () => {
+    window.history.replaceState(null, '', '/?keywords=send#section-2')
+    Object.defineProperty(document, 'readyState', { value: 'loading', configurable: true })
+    const elements = render({ keywords: 'send' })
+    window.innerHeight = 800
+    // The match is below the window: the browser jumped to the section's top.
+    window.HTMLElement.prototype.getBoundingClientRect = function () {
+      return this.matches('mark') ? { top: 2000, bottom: 2020 } : { top: 0, bottom: 0 }
+    }
+
+    findKeywords(elements.form, { input: elements.input, content: elements.content, outline: elements.outline })
+    await vi.waitFor(() => expect(status()).toBe('Match 1 of 1, in 1 section'))
+    window.scrollBy.mockClear()
+
+    window.dispatchEvent(new window.Event('load'))
+
+    await vi.waitFor(() => expect(window.scrollBy).toHaveBeenCalled())
+  })
+
+  test('Should put the reader back in the search box once the page has loaded, after the browser\'s jump to the section took them out of it', async () => {
+    window.history.replaceState(null, '', '/?keywords=send#section-2')
+    Object.defineProperty(document, 'readyState', { value: 'loading', configurable: true })
+    const elements = render({ keywords: 'send' })
+    findKeywords(elements.form, { input: elements.input, content: elements.content, outline: elements.outline })
+    await vi.waitFor(() => expect(status()).toBe('Match 1 of 1, in 1 section'))
+    // The browser's jump to a section that cannot take focus leaves the page with it.
+    elements.input.blur()
+
+    window.dispatchEvent(new window.Event('load'))
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(elements.input))
+  })
+
+  test('Should not wait for the page to load when it already has', async () => {
+    window.history.replaceState(null, '', '/?keywords=send#section-2')
+    const elements = render({ keywords: 'send' })
+    const listen = vi.spyOn(window, 'addEventListener')
+
+    findKeywords(elements.form, { input: elements.input, content: elements.content, outline: elements.outline })
+    await vi.waitFor(() => expect(status()).toBe('Match 1 of 1, in 1 section'))
+
+    expect(listen).not.toHaveBeenCalledWith('load', expect.anything(), expect.anything())
   })
 })
 

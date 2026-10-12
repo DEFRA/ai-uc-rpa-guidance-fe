@@ -347,6 +347,99 @@ describe('#prototypeGuidesController', () => {
       expect(payload).toMatch(/<input[^>]*name="keywords"[^>]*value="land"/)
     })
 
+    describe('remembering the format chosen', () => {
+      const open = async (query, cookie) => {
+        mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
+        mockGetSections.mockResolvedValueOnce({ ok: true, data: guideSections })
+
+        return server.inject({
+          method: 'GET',
+          url: `/prototype-guides/${DOCUMENT_ID}${query}`,
+          headers: cookie ? { cookie } : {}
+        })
+      }
+
+      const isStepper = (payload) => payload.includes('Step 1 of 4') || payload.includes('Step 3 of 4')
+
+      test.each([
+        ['the stepper', '?view=steps', 'steps'],
+        ['the whole guide', '?view=whole', 'whole']
+      ])('Should remember choosing %s, in a cookie that lasts', async (_name, query, value) => {
+        const { headers } = await open(query)
+
+        const cookie = [].concat(headers['set-cookie']).find((header) => header.startsWith('guideView='))
+        expect(cookie).toContain(`guideView=${value}`)
+        expect(cookie).toContain('Max-Age=')
+        expect(cookie).toContain('HttpOnly')
+      })
+
+      test('Should not remember a format a script asked for, as the stepper\'s search reads the whole guide', async () => {
+        mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
+        mockGetSections.mockResolvedValueOnce({ ok: true, data: guideSections })
+
+        const { statusCode, headers } = await server.inject({
+          method: 'GET',
+          url: `/prototype-guides/${DOCUMENT_ID}?view=whole`,
+          headers: { cookie: 'guideView=steps', 'sec-fetch-mode': 'cors' }
+        })
+
+        expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+        expect(headers['set-cookie']).toBeUndefined()
+      })
+
+      test('Should remember a format named in the address of a page the reader opens', async () => {
+        mockGetManifest.mockResolvedValueOnce({ ok: true, data: manifest })
+        mockGetSections.mockResolvedValueOnce({ ok: true, data: guideSections })
+
+        const { headers } = await server.inject({
+          method: 'GET',
+          url: `/prototype-guides/${DOCUMENT_ID}?view=whole`,
+          headers: { cookie: 'guideView=steps', 'sec-fetch-mode': 'navigate' }
+        })
+
+        expect([].concat(headers['set-cookie']).join()).toContain('guideView=whole')
+      })
+
+      test('Should open in the format last chosen when the address names none', async () => {
+        const { payload } = await open('', 'guideView=steps')
+
+        expect(isStepper(payload)).toBe(true)
+      })
+
+      test('Should open the whole guide when no format was chosen', async () => {
+        const { payload, headers } = await open('')
+
+        expect(isStepper(payload)).toBe(false)
+        expect(headers['set-cookie']).toBeUndefined()
+      })
+
+      test('Should open the whole guide when the cookie names no format', async () => {
+        const { payload } = await open('', 'guideView=sideways')
+
+        expect(isStepper(payload)).toBe(false)
+      })
+
+      test('Should follow the format the address names over the one remembered', async () => {
+        const { payload } = await open('?view=whole', 'guideView=steps')
+
+        expect(isStepper(payload)).toBe(false)
+      })
+
+      test('Should open the stepper at the step holding the section asked for', async () => {
+        const { payload } = await open('?keywords=check&section=2', 'guideView=steps')
+
+        expect(payload).toContain('Step 3 of 4')
+        expect(payload).toContain('id="section-2"')
+      })
+
+      test('Should open the whole guide whatever section is asked for', async () => {
+        const { statusCode, payload } = await open('?keywords=check&section=2')
+
+        expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
+        expect(isStepper(payload)).toBe(false)
+      })
+    })
+
     test('Should outline every section at every depth, linking within the page', async () => {
       const outline = outlineOf((await view()).payload)
 
@@ -372,35 +465,44 @@ describe('#prototypeGuidesController', () => {
       expect(payload).toMatch(/<a[^>]*aria-current="true"[^>]*>\s*Traditional/)
     })
 
-    test('Should show the first top-level section and its subsections as step 1', async () => {
+    test('Should show the introduction and the first section, without its subsections, as step 1', async () => {
       const { statusCode, payload } = await view('?view=steps')
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_OK)
-      expect(payload).toContain('Step 1 of 3')
+      expect(payload).toContain('Step 1 of 4')
       expect(payload).toContain('Read this first.')
       expect(payload).toContain('id="section-1"')
-      expect(payload).toContain('Who it is for.')
-      expect(payload).not.toContain('How to check.')
+      expect(payload).not.toContain('Who it is for.')
       expect(payload).toMatch(/<a[^>]*href="\?view=steps&amp;step=2"[^>]*rel="next"/)
-      expect(payload).toContain('2 Checking')
+      expect(payload).toContain('1.1 Scope')
+    })
+
+    test('Should show a subsection as a step of its own', async () => {
+      const { payload } = await view('?view=steps&step=2')
+
+      expect(payload).toContain('Step 2 of 4')
+      expect(payload).toContain('id="section-1.1"')
+      expect(payload).toContain('Who it is for.')
+      expect(payload).not.toContain('id="section-1"')
+      expect(payload).not.toContain('How to check.')
     })
 
     test('Should show a later step without the introduction, with the way back', async () => {
-      const { payload } = await view('?view=steps&step=3')
+      const { payload } = await view('?view=steps&step=4')
 
-      expect(payload).toContain('Step 3 of 3')
+      expect(payload).toContain('Step 4 of 4')
       expect(payload).toContain('The annex.')
       expect(payload).not.toContain('Read this first.')
-      expect(payload).toMatch(/<a[^>]*href="\?view=steps&amp;step=2"[^>]*rel="prev"/)
+      expect(payload).toMatch(/<a[^>]*href="\?view=steps&amp;step=3"[^>]*rel="prev"/)
       expect(payload).not.toContain('rel="next"')
     })
 
-    test('Should mark the step\'s own sections current in the outline, and link the others to their step', async () => {
-      const outline = outlineOf((await view('?view=steps&step=2')).payload)
+    test('Should mark the step\'s section current in the outline, and link the others to their step', async () => {
+      const outline = outlineOf((await view('?view=steps&step=3')).payload)
 
       expect(outline).toMatch(/<a[^>]*app-toc__link--current[^>]*href="#section-2"/)
-      expect(outline).toContain('href="?view=steps&amp;step=1#section-1.1"')
-      expect(outline).toContain('href="?view=steps&amp;step=3#section-annex-a"')
+      expect(outline).toContain('href="?view=steps&amp;step=2#section-1.1"')
+      expect(outline).toContain('href="?view=steps&amp;step=4#section-annex-a"')
       expect(outline).toContain('data-module="guide-step-outline"')
     })
 
@@ -412,7 +514,7 @@ describe('#prototypeGuidesController', () => {
     })
 
     test('Should put Next above Previous, above the step, so Next stays put from step to step', async () => {
-      const { payload } = await view('?view=steps&step=2')
+      const { payload } = await view('?view=steps&step=3')
 
       const next = payload.indexOf('rel="next"')
       const previous = payload.indexOf('rel="prev"')
@@ -431,7 +533,7 @@ describe('#prototypeGuidesController', () => {
     })
 
     test('Should 404 for a step the guide does not have', async () => {
-      const { statusCode } = await view('?view=steps&step=4')
+      const { statusCode } = await view('?view=steps&step=5')
 
       expect(statusCode).toBe(statusCodes.HTTP_STATUS_NOT_FOUND)
     })

@@ -1,7 +1,12 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 
+import { config } from '../../config/config.js'
 import * as prototypeGuidesController from './controller.js'
+import { GUIDE_VIEW_COOKIE, GUIDE_VIEWS } from './view-model.js'
+
+// The format a reader chose, kept for a year: a preference, not a session.
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
 
 const LEGACY_PREFIX = '/admin/prototype-guides'
 
@@ -11,12 +16,14 @@ const MAX_QUERY_LENGTH = 500
 
 const documentId = Joi.string().uuid()
 
-// A guide reads whole, or one top-level section at a time, and may open with
-// a search for keywords in it, as the stepper does to go on to the next match
-// (or, at its last match, back to the match before).
+// A guide reads whole, or one section at a time: as the address
+// says, or else as the reader last chose. It may open with a search for
+// keywords in it, at a section (as a search result does), or at a step's
+// last match (as going back through the matches does).
 const guideQuery = Joi.object({
-  view: Joi.string().valid('whole', 'steps').default('whole'),
-  step: Joi.number().integer().min(1).default(1),
+  view: Joi.string().valid(...GUIDE_VIEWS),
+  step: Joi.number().integer().min(1),
+  section: Joi.string().max(MAX_QUERY_LENGTH),
   keywords: Joi.string().trim().allow('').max(MAX_QUERY_LENGTH).default(''),
   match: Joi.string().valid('last')
 })
@@ -173,6 +180,17 @@ const prototypeGuidesRouter = {
   plugin: {
     name: 'prototypeGuidesRouter',
     register (server) {
+      server.state(GUIDE_VIEW_COOKIE, {
+        ttl: ONE_YEAR_MS,
+        path: '/',
+        isHttpOnly: true,
+        isSameSite: 'Lax',
+        isSecure: config.get('session.cookie.secure'),
+        encoding: 'none',
+        // An unknown value is the reader's old cookie, not an attack: ignore it.
+        ignoreErrors: true,
+        clearInvalid: true
+      })
       server.route(routes)
     }
   }
