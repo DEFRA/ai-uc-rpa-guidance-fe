@@ -5,8 +5,14 @@ import { config } from '../../config/config.js'
 import * as prototypeGuidesController from './controller.js'
 import { GUIDE_VIEW_COOKIE, GUIDE_VIEWS } from './view-model.js'
 
+const DAYS_IN_YEAR = 365
+const HOURS_IN_DAY = 24
+const MINUTES_IN_HOUR = 60
+const SECONDS_IN_MINUTE = 60
+const MS_IN_SECOND = 1000
+
 // The format a reader chose, kept for a year: a preference, not a session.
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
+const ONE_YEAR_MS = DAYS_IN_YEAR * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SECOND
 
 const LEGACY_PREFIX = '/admin/prototype-guides'
 

@@ -276,10 +276,10 @@ function guideViewOf (asked, remembered) {
  *   or the first.
  * @returns {object | null} Null for a step the guide does not have.
  */
-function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WHOLE, step: asked, section, keywords = '' } = {}) {
+function prototypeGuideViewModel ({ guide, introduction, sections }, { view = WHOLE, step: asked, section: sectionNumber, keywords = '' } = {}) {
   const steps = stepsOf(sections)
   const stepping = view === STEPS
-  const holding = steps.findIndex((stepSections) => stepSections.some((candidate) => candidate.number === section))
+  const holding = steps.findIndex((stepSections) => stepSections.some((candidate) => candidate.number === sectionNumber))
   const step = asked ?? Math.max(holding + 1, 1)
 
   if (stepping && step > steps.length) {
