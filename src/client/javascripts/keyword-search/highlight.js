@@ -211,6 +211,236 @@ function bringIntoView (mark, bar, win) {
 }
 
 /**
+ * The whole guide's content, read once, from the page that shows it whole;
+ * read again after a failure.
+ *
+ * @param {() => Promise<string>} readGuide The whole guide's page, as HTML.
+ * @returns {() => Promise<Element>}
+ */
+function wholeGuideReader (readGuide) {
+  let wholeGuide = null
+
+  return async () => {
+    wholeGuide ??= readGuide().then((html) => {
+      const page = new globalThis.DOMParser().parseFromString(html, 'text/html')
+      return page.querySelector('.app-guidance-content') ?? page.body
+    })
+
+    try {
+      return await wholeGuide
+    } catch (err) {
+      wholeGuide = null
+      throw err
+    }
+  }
+}
+
+/**
+ * The section in another step to go to: the next with a match after this
+ * step's sections (or, going back, the last before them), going round from
+ * the end to the start (or the start to the end).
+ *
+ * @param {Element} guide The whole guide's content.
+ * @param {Element} content This step's content.
+ * @param {string[]} keywords
+ * @param {boolean} back
+ * @returns {string | undefined} The section's id, or none.
+ */
+function otherStepSection (guide, content, keywords, back) {
+  const order = Array.from(guide.querySelectorAll(SECTION)).map((section) => section.id)
+  const here = Array.from(content.querySelectorAll(SECTION)).map((section) => order.indexOf(section.id))
+  const elsewhere = sectionsMatching(guide, keywords).filter((id) => !here.includes(order.indexOf(id)))
+
+  return back
+    ? elsewhere.findLast((id) => order.indexOf(id) < Math.min(...here)) ?? elsewhere.at(-1)
+    : elsewhere.find((id) => order.indexOf(id) > Math.max(...here)) ?? elsewhere[0]
+}
+
+// For a promise left to run: a search catches its own failures (an
+// unreadable whole guide), so nothing reaches here.
+function handledInside () {
+  // Nothing to do.
+}
+
+/**
+ * One guide page's keyword search: what was searched for, its matches and
+ * which is current.
+ */
+class KeywordSearch {
+  constructor (form, { input, content, outline, fetchGuide, go }) {
+    this.form = form
+    this.input = input
+    this.content = content
+    this.outline = outline
+    this.doc = form.ownerDocument
+    this.win = this.doc.defaultView
+    this.status = form.querySelector('[data-keyword-search-status]')
+    this.stepper = outline?.dataset.module === 'guide-step-outline'
+    this.wholeGuide = wholeGuideReader(fetchGuide ?? (() => fetchWholeGuide(this.doc)))
+    this.open = go ?? ((url) => this.doc.location.assign(url))
+    this.latest = 0
+    this.searched = ''
+    this.marks = []
+    this.current = -1
+    this.sections = []
+  }
+
+  get words () {
+    return this.input.value.trim()
+  }
+
+  show (index) {
+    this.marks[this.current]?.classList.remove(CURRENT_MATCH)
+    this.current = index
+    const mark = this.marks[index]
+    mark.classList.add(CURRENT_MATCH)
+    bringIntoView(mark, this.form, this.win)
+
+    // For the outline, which shows the reader where they are.
+    this.doc.dispatchEvent(new this.win.CustomEvent('keyword-search:match'))
+
+    // The outline scrolls by itself, so its link to the match's section may
+    // be out of sight below (or above) what it shows.
+    const link = linkTo(this.outline, mark.closest(SECTION)?.id)
+    if (link) {
+      keepInView(this.outline, link)
+    }
+
+    const where = this.stepper ? ' in this step' : `, in ${counted(this.sections.length, 'section', 'sections')}`
+    this.status.textContent = `Match ${index + 1} of ${this.marks.length}${where}`
+  }
+
+  // Open the step with the next match (or, going back, the match before),
+  // at that match's section, taking the search with it. False when no other
+  // step has a match, or the whole guide cannot be read.
+  async goToStep (keywords, back) {
+    try {
+      const target = otherStepSection(await this.wholeGuide(), this.content, keywords, back)
+      const link = target && linkTo(this.outline, target)
+
+      if (!link) {
+        return false
+      }
+
+      const url = new URL(link.getAttribute('href'), this.doc.location.href)
+      url.searchParams.set('keywords', this.words)
+      url.searchParams.delete('match')
+      if (back) {
+        url.searchParams.set('match', 'last')
+      }
+      this.open(url.href)
+
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async markEverySection (keywords, searchNumber) {
+    try {
+      const everywhere = sectionsMatching(await this.wholeGuide(), keywords)
+
+      // Unless a later search has taken over while the guide was fetched.
+      if (searchNumber === this.latest) {
+        markSections(this.outline, everywhere)
+      }
+    } catch {
+      // The other steps' sections stay unmarked; this step's are shown.
+    }
+  }
+
+  // A new search, starting at the first match (or, going back, the last),
+  // in the section named if it has one.
+  async search (keywords, { back = false, startAt } = {}) {
+    this.latest += 1
+    clearHighlights(this.content)
+
+    this.marks = highlight(this.content, keywords)
+    this.current = -1
+    this.sections = sectionsMatching(this.content, keywords)
+    markSections(this.outline, this.sections)
+
+    if (!keywords.length) {
+      this.status.textContent = ''
+      return
+    }
+
+    if (this.stepper) {
+      this.markEverySection(keywords, this.latest).catch(handledInside)
+    }
+
+    if (this.marks.length) {
+      this.show(this.startingMatch(back, startAt))
+      return
+    }
+
+    await this.lookElsewhere(keywords, back)
+  }
+
+  // The first match (or the last) in the section named, or in the step.
+  startingMatch (back, startAt) {
+    const all = this.marks.map((_mark, index) => index)
+    const inSection = all.filter((index) => this.marks[index].closest(SECTION)?.id === startAt)
+    const candidates = inSection.length ? inSection : all
+
+    return back ? candidates.at(-1) : candidates[0]
+  }
+
+  // Nothing here: in the stepper, try the other steps.
+  async lookElsewhere (keywords, back) {
+    const none = `No matches for ${this.words}`
+    this.status.textContent = this.stepper ? 'No matches in this step. Looking in the other steps.' : none
+
+    if (this.stepper && !(await this.goToStep(keywords, back))) {
+      this.status.textContent = none
+    }
+  }
+
+  // The next match (or, going back, the one before), in another step if this
+  // step has no more, or round to the first (or the last).
+  async move (keywords, back) {
+    const index = this.current + (back ? -1 : 1)
+
+    if (index >= 0 && index < this.marks.length) {
+      this.show(index)
+      return
+    }
+
+    const wentOn = this.stepper && (await this.goToStep(keywords, back))
+
+    if (!wentOn && this.marks.length) {
+      this.show(back ? this.marks.length - 1 : 0)
+    }
+  }
+
+  // The same words again move on; new words start a new search.
+  async find (back) {
+    const keywords = keywordsOf(this.input.value)
+    const words = keywords.join(' ')
+
+    if (words && words === this.searched) {
+      await this.move(keywords, back)
+      return
+    }
+
+    this.searched = words
+    await this.search(keywords, { back })
+  }
+
+  // Opened with a search, as the stepper opens the step with the next match.
+  async resume () {
+    const keywords = keywordsOf(this.input.value)
+    this.searched = keywords.join(' ')
+    this.input.focus({ preventScroll: true })
+
+    await this.search(keywords, {
+      back: new URL(this.doc.location.href).searchParams.get('match') === 'last',
+      startAt: decodeURIComponent(this.doc.location.hash.slice(1))
+    })
+  }
+}
+
+/**
  * Find keywords in the guide on the page. Submitting the search box (with the
  * Enter key) highlights each match in the guide and, in its outline, each
  * section with a match, and brings the first match into view. Submitting the
@@ -235,168 +465,13 @@ function bringIntoView (mark, bar, win) {
  * @param {() => Promise<string>} [parts.fetchGuide] The whole guide's page, as HTML.
  * @param {(url: string) => void} [parts.go] Opens another page.
  */
-function findKeywords (form, { input, content, outline, fetchGuide, go }) {
+function findKeywords (form, parts) {
   if (!form) {
     return
   }
 
+  const search = new KeywordSearch(form, parts)
   const doc = form.ownerDocument
-  const win = doc.defaultView
-  const status = form.querySelector('[data-keyword-search-status]')
-  const stepper = outline?.dataset.module === 'guide-step-outline'
-  const readGuide = fetchGuide ?? (() => fetchWholeGuide(doc))
-  const open = go ?? ((url) => doc.location.assign(url))
-  let wholeGuide = null
-  let latest = 0
-  let searched = ''
-  let marks = []
-  let current = -1
-  let sections = []
-
-  const wholeGuideContent = async () => {
-    wholeGuide ??= readGuide().then((html) => {
-      const page = new globalThis.DOMParser().parseFromString(html, 'text/html')
-      return page.querySelector('.app-guidance-content') ?? page.body
-    })
-
-    try {
-      return await wholeGuide
-    } catch (err) {
-      wholeGuide = null // to try again on the next search
-      throw err
-    }
-  }
-
-  const show = (index) => {
-    marks[current]?.classList.remove(CURRENT_MATCH)
-    current = index
-    marks[current].classList.add(CURRENT_MATCH)
-    bringIntoView(marks[current], form, win)
-
-    // For the outline, which shows the reader where they are.
-    doc.dispatchEvent(new win.CustomEvent('keyword-search:match'))
-
-    // The outline scrolls by itself, so its link to the match's section may
-    // be out of sight below (or above) what it shows.
-    const link = linkTo(outline, marks[current].closest(SECTION)?.id)
-    if (link) {
-      keepInView(outline, link)
-    }
-
-    const where = stepper ? ' in this step' : `, in ${counted(sections.length, 'section', 'sections')}`
-    status.textContent = `Match ${current + 1} of ${marks.length}${where}`
-  }
-
-  // The step with the next match after this step's (or, going back, the
-  // match before), going round from the end to the start (or the start to
-  // the end), opened at that match's section. False when no other step has a
-  // match, or the whole guide cannot be read.
-  const goToStep = async (keywords, back) => {
-    try {
-      const guide = await wholeGuideContent()
-      const order = Array.from(guide.querySelectorAll(SECTION)).map((section) => section.id)
-      const here = Array.from(content.querySelectorAll(SECTION)).map((section) => order.indexOf(section.id))
-      const elsewhere = sectionsMatching(guide, keywords).filter((id) => !here.includes(order.indexOf(id)))
-      const target = back
-        ? elsewhere.findLast((id) => order.indexOf(id) < Math.min(...here)) ?? elsewhere.at(-1)
-        : elsewhere.find((id) => order.indexOf(id) > Math.max(...here)) ?? elsewhere[0]
-      const link = target && linkTo(outline, target)
-
-      if (!link) {
-        return false
-      }
-
-      const url = new URL(link.getAttribute('href'), doc.location.href)
-      url.searchParams.set('keywords', input.value.trim())
-      url.searchParams.delete('match')
-      if (back) {
-        url.searchParams.set('match', 'last')
-      }
-      open(url.href)
-
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  const markEverySection = async (keywords, searchNumber) => {
-    try {
-      const everywhere = sectionsMatching(await wholeGuideContent(), keywords)
-
-      // Unless a later search has taken over while the guide was fetched.
-      if (searchNumber === latest) {
-        markSections(outline, everywhere)
-      }
-    } catch {
-      // The other steps' sections stay unmarked; this step's are shown.
-    }
-  }
-
-  // A new search, starting at the first match (or, going back, the last),
-  // in the section named if it has one.
-  const search = async (keywords, { back = false, startAt } = {}) => {
-    const searchNumber = ++latest
-    clearHighlights(content)
-
-    marks = highlight(content, keywords)
-    current = -1
-    sections = sectionsMatching(content, keywords)
-    markSections(outline, sections)
-
-    if (!keywords.length) {
-      status.textContent = ''
-      return
-    }
-
-    if (stepper) {
-      markEverySection(keywords, searchNumber)
-    }
-
-    if (marks.length) {
-      const inSection = marks.map((_mark, index) => index)
-        .filter((index) => marks[index].closest(SECTION)?.id === startAt)
-      const candidates = inSection.length ? inSection : marks.map((_mark, index) => index)
-      show(back ? candidates.at(-1) : candidates[0])
-      return
-    }
-
-    status.textContent = stepper ? 'No matches in this step. Looking in the other steps.' : `No matches for ${input.value.trim()}`
-
-    if (stepper && !(await goToStep(keywords, back))) {
-      status.textContent = `No matches for ${input.value.trim()}`
-    }
-  }
-
-  // The next match (or, going back, the one before), in another step if this
-  // step has no more, or round to the first (or the last).
-  const move = async (keywords, back) => {
-    const index = current + (back ? -1 : 1)
-
-    if (index >= 0 && index < marks.length) {
-      show(index)
-      return
-    }
-
-    const wentOn = stepper && (await goToStep(keywords, back))
-
-    if (!wentOn && marks.length) {
-      show(back ? marks.length - 1 : 0)
-    }
-  }
-
-  const find = (back) => {
-    const keywords = keywordsOf(input.value)
-    const words = keywords.join(' ')
-
-    if (words && words === searched) {
-      move(keywords, back)
-      return
-    }
-
-    searched = words
-    search(keywords, { back })
-  }
 
   // The outline stays in view below the search box, which stays in view
   // too, so the stylesheet needs the box's height, which its status changes.
@@ -408,25 +483,18 @@ function findKeywords (form, { input, content, outline, fetchGuide, go }) {
 
   form.addEventListener('submit', (event) => {
     event.preventDefault()
-    find(false)
+    search.find(false).catch(handledInside)
   })
 
-  input.addEventListener('keydown', (event) => {
+  parts.input.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && event.shiftKey) {
       event.preventDefault()
-      find(true)
+      search.find(true).catch(handledInside)
     }
   })
 
-  // Opened with a search, as the stepper opens the step with the next match.
-  if (input.value.trim()) {
-    const keywords = keywordsOf(input.value)
-    searched = keywords.join(' ')
-    search(keywords, {
-      back: new URL(doc.location.href).searchParams.get('match') === 'last',
-      startAt: decodeURIComponent(doc.location.hash.slice(1))
-    })
-    input.focus({ preventScroll: true })
+  if (search.words) {
+    search.resume().catch(handledInside)
   }
 }
 
