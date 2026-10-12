@@ -11,10 +11,14 @@ const MAX_QUERY_LENGTH = 500
 
 const documentId = Joi.string().uuid()
 
-// A guide reads whole, or one top-level section at a time.
+// A guide reads whole, or one top-level section at a time, and may open with
+// a search for keywords in it, as the stepper does to go on to the next match
+// (or, at its last match, back to the match before).
 const guideQuery = Joi.object({
   view: Joi.string().valid('whole', 'steps').default('whole'),
-  step: Joi.number().integer().min(1).default(1)
+  step: Joi.number().integer().min(1).default(1),
+  keywords: Joi.string().trim().allow('').max(MAX_QUERY_LENGTH).default(''),
+  match: Joi.string().valid('last')
 })
 
 const prototypeGuideNotFound = (_request, _h, err) => {
