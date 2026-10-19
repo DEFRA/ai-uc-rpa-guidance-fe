@@ -1,6 +1,7 @@
 {% extends "common/layout.njk" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 
 {% set pageTitle = 'Start a quality check' %}
@@ -10,11 +11,19 @@
   <div class="govuk-width-container">
     <main class="govuk-main-wrapper" id="main-content" role="main">
 
+      {% if errorMessage %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: [{ text: errorMessage, href: "#documentId" }]
+        }) }}
+      {% endif %}
+
       <h1 class="govuk-heading-xl">Start a quality check</h1>
 
       {% if hasGuides %}
-        {# Starting a check does nothing yet: the button submits nothing. #}
-        <form>
+        <form method="post" action="/proof-of-concept/quality-checks/start">
+          <input type="hidden" name="_csrf" value="{{ csrf }}">
+
           {{ govukSelect({
             id: "documentId",
             name: "documentId",
@@ -22,12 +31,12 @@
               text: "Select a document",
               classes: "govuk-label--m"
             },
-            items: selectItems
+            items: selectItems,
+            errorMessage: showSelectError and { text: errorMessage }
           }) }}
 
           {{ govukButton({
-            text: "Start quality check",
-            type: "button"
+            text: "Start quality check"
           }) }}
         </form>
       {% else %}

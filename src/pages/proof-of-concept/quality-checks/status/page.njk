@@ -8,7 +8,7 @@
     <main class="govuk-main-wrapper" id="main-content" role="main">
       <h1 class="govuk-heading-xl">Prototype quality checks</h1>
 
-      {% if guides | length %}
+      {% if runs | length %}
         <table class="govuk-table">
           <thead class="govuk-table__head">
             <tr class="govuk-table__row">
@@ -19,14 +19,34 @@
             </tr>
           </thead>
           <tbody class="govuk-table__body">
-            {% for guide in guides %}
+            {% for run in runs %}
               <tr class="govuk-table__row">
-                <td class="govuk-table__cell">{{ guide.title }}</td>
+                <td class="govuk-table__cell">{{ run.title }}</td>
                 <td class="govuk-table__cell">
-                  <strong class="govuk-tag govuk-tag--grey">Not run</strong>
+                  {% if run.status == 'completed' %}
+                    <strong class="govuk-tag govuk-tag--green">Completed</strong>
+                  {% elif run.status == 'running' %}
+                    <strong class="govuk-tag govuk-tag--yellow">Running</strong>
+                  {% elif run.status == 'pending' %}
+                    <strong class="govuk-tag govuk-tag--blue">Pending</strong>
+                  {% elif run.status == 'error' %}
+                    <strong class="govuk-tag govuk-tag--red">Error</strong>
+                  {% else %}
+                    <strong class="govuk-tag govuk-tag--grey">Not run</strong>
+                  {% endif %}
+                  {% if run.progress %}
+                    <p class="govuk-body-s govuk-!-margin-top-1 govuk-!-margin-bottom-0">{{ run.progress }}</p>
+                  {% endif %}
                 </td>
-                <td class="govuk-table__cell">—</td>
                 <td class="govuk-table__cell">
+                  {% if run.updatedAt %}
+                    {{ run.updatedAt | truncate(10, true, '') }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="govuk-table__cell">
+                  {# No results page yet: the comments are read through the API. #}
                   <button
                     class="govuk-button govuk-button--secondary"
                     disabled
@@ -37,6 +57,10 @@
             {% endfor %}
           </tbody>
         </table>
+
+        <p class="govuk-body">
+          <a class="govuk-link" href="/proof-of-concept/quality-checks">Refresh status</a>
+        </p>
       {% else %}
         <p class="govuk-body">
           No prototype guides have been uploaded yet.

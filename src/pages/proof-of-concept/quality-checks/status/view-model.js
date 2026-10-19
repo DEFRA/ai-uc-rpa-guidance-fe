@@ -1,16 +1,29 @@
 import { homeCrumb } from '../../../common/breadcrumbs.js'
 
+// A check still under way shows how far it has got.
+const UNDER_WAY = new Set(['pending', 'running'])
+
 /**
- * @param {object[]} guides - the prototype guides, as listPrototypeGuides gives them
+ * "3/6 sections" while a check is under way, or null.
+ *
+ * @param {import('../../../../services/quality-checks.js').QualityCheckRun} run
+ * @returns {string|null}
+ */
+function progressOf (run) {
+  return UNDER_WAY.has(run.status) && run.sectionsTotal
+    ? `${run.sectionsDone ?? 0}/${run.sectionsTotal} sections`
+    : null
+}
+
+/**
+ * @param {import('../../../../services/quality-checks.js').QualityCheckRun[]} runs
  * @returns {object}
  */
-function statusViewModel (guides) {
+function statusViewModel (runs) {
   return {
     pageTitle: 'Prototype quality checks',
     page: 'quality-checks',
-    guides: guides.map(guide => ({
-      title: guide.title || guide.name
-    })),
+    runs: runs.map(run => ({ ...run, progress: progressOf(run) })),
     breadcrumbs: [homeCrumb]
   }
 }
