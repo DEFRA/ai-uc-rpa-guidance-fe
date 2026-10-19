@@ -1,0 +1,45 @@
+{% extends "common/layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+
+{% set pageTitle = 'Start a quality check' %}
+{% set page = 'quality-checks' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <h1 class="govuk-heading-xl">Start a quality check</h1>
+
+      {% if hasGuides %}
+        {# Starting a check does nothing yet: the button submits nothing. #}
+        <form>
+          {{ govukSelect({
+            id: "documentId",
+            name: "documentId",
+            label: {
+              text: "Select a document",
+              classes: "govuk-label--m"
+            },
+            items: selectItems
+          }) }}
+
+          {{ govukButton({
+            text: "Start quality check",
+            type: "button"
+          }) }}
+        </form>
+      {% else %}
+        <p class="govuk-body">
+          No prototype guides are available to check. Upload prototype
+          guides before running a quality check.
+        </p>
+        <a class="govuk-link" href="/prototype-guides/upload">
+          Upload prototype guides
+        </a>
+      {% endif %}
+
+    </main>
+  </div>
+{% endblock %}

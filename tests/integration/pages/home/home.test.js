@@ -67,6 +67,16 @@ describe('#homepageController', () => {
     expect(payload).toContain('/content-review')
   })
 
+  test('Should link to the prototype quality checks', async () => {
+    const { payload } = await server.inject({
+      method: 'GET',
+      url: '/'
+    })
+
+    expect(payload).toContain('href="/proof-of-concept/quality-checks"')
+    expect(payload).toContain('Prototype quality checks')
+  })
+
   test('Should not contain a link to /getting-started', async () => {
     const { payload } = await server.inject({
       method: 'GET',

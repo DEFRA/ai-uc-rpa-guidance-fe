@@ -1,0 +1,56 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Prototype quality checks' %}
+{% set page = 'quality-checks' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+      <h1 class="govuk-heading-xl">Prototype quality checks</h1>
+
+      {% if guides | length %}
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header">Document</th>
+              <th scope="col" class="govuk-table__header">Status</th>
+              <th scope="col" class="govuk-table__header">Last updated</th>
+              <th scope="col" class="govuk-table__header">Action</th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for guide in guides %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">{{ guide.title }}</td>
+                <td class="govuk-table__cell">
+                  <strong class="govuk-tag govuk-tag--grey">Not run</strong>
+                </td>
+                <td class="govuk-table__cell">—</td>
+                <td class="govuk-table__cell">
+                  <button
+                    class="govuk-button govuk-button--secondary"
+                    disabled
+                    aria-disabled="true"
+                  >View</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="govuk-body">
+          No prototype guides have been uploaded yet.
+        </p>
+      {% endif %}
+
+      <a
+        href="/proof-of-concept/quality-checks/start"
+        role="button"
+        draggable="false"
+        class="govuk-button"
+      >
+        Start a quality check
+      </a>
+    </main>
+  </div>
+{% endblock %}
