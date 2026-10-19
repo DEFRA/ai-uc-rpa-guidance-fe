@@ -1,0 +1,35 @@
+{% extends "common/layout.njk" %}
+
+{% set pageTitle = 'Quality check started' %}
+{% set page = 'quality-checks' %}
+
+{% block content %}
+  <div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+
+      <div class="govuk-panel govuk-panel--confirmation">
+        <h1 class="govuk-panel__title">Quality check started</h1>
+        {% if jobId %}
+          <div class="govuk-panel__body">
+            Your job reference<br>
+            <strong>{{ jobId }}</strong>
+          </div>
+        {% endif %}
+      </div>
+
+      <h2 class="govuk-heading-m">What happens next</h2>
+      <p class="govuk-body">
+        The guide is being checked against the quality rules, one section
+        at a time. This may take several minutes. Check the prototype quality
+        checks page to see how many sections have been checked.
+      </p>
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/proof-of-concept/quality-checks">
+          View prototype quality checks
+        </a>
+      </p>
+
+    </main>
+  </div>
+{% endblock %}

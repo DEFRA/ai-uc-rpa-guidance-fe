@@ -195,6 +195,18 @@ async function getLatestAnalysis (id) {
   return request(`/publishing/documents/${id}/analysis`, { expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND] })
 }
 
+async function startQualityCheck (documentId) {
+  return request('/quality-checks/check', {
+    method: 'POST',
+    body: { documentId },
+    expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND]
+  })
+}
+
+async function getLatestQualityCheck (documentId) {
+  return request(`/quality-checks/documents/${documentId}/latest`, { expected: [http2StatusCodes.HTTP_STATUS_NOT_FOUND] })
+}
+
 async function startReview (documentId) {
   return request('/review/analyse', {
     method: 'POST',
@@ -249,6 +261,8 @@ export {
   initiatePrototypeGuidesUpload,
   initiateUpload,
   startAnalysis,
+  startQualityCheck,
+  getLatestQualityCheck,
   getLatestAnalysis,
   startReview,
   getLatestReview,
