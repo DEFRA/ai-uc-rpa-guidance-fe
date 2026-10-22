@@ -67,7 +67,7 @@
     "validator": "13.15.35"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.12",
+    "@vitest/coverage-v8": "5.0.5",
     "autoprefixer": "10.6.1",
     "cssnano": "8.0.2",
     "cssnano-preset-default": "8.0.2",
@@ -78,14 +78,14 @@
     "npm-run-all2": "9.0.2",
     "postcss-load-config": "6.0.1",
     "postcss-loader": "8.2.1",
-    "sass-embedded": "1.100.0",
-    "sass-loader": "17.0.0",
+    "sass-embedded": "1.105.1",
+    "sass-loader": "17.0.1",
     "sharp": "0.35.5",
     "source-map-loader": "5.0.0",
     "stylelint": "17.16.0",
     "stylelint-config-gds": "3.0.0",
     "vite": "8.1.6",
-    "vitest": "4.1.12",
+    "vitest": "5.0.5",
     "vitest-fetch-mock": "0.4.5"
   },
   "overrides": {
